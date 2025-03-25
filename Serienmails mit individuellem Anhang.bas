@@ -325,6 +325,14 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             '******************************************************************************
             Dim sendDirectly As Boolean
             sendDirectly = (MsgBox("Möchten Sie die E-Mails direkt versenden? Wenn nein, dann werden die E-Mails nur generiert und Sie senden jede E-Mail einzeln ab.", vbYesNo) = vbYes)
+
+            If sendDirectly Then
+                Dim confirmSend As VbMsgBoxResult
+                confirmSend = MsgBox("Sind Sie sicher, dass alle E-Mails sofort nach ihrer Erstellung automatisch versendet werden sollen?", vbYesNo + vbQuestion, "Bestätigung E-Mail-Versand")
+                If confirmSend = vbNo Then
+                    sendDirectly = False
+                End If
+            End If
             
             '******************************************************************************
             ' ** 9. HTML-Formatierung (MODIFIKATIONSMÖGLICHKEIT: CSS-Stile hinzufügen) **
