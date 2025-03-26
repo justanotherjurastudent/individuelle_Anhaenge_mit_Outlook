@@ -49,39 +49,46 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             '******************************************************************************
             Dim selectedSheet As Integer
             Dim validInput As Boolean
-            validInput = False
             
-            Do
-                ' Arbeitsblätter auflisten
-                Dim sheetList As String
-                Dim i As Integer
-                sheetList = "Verfügbare Arbeitsblätter:" & vbCrLf
+            If xlWB.Worksheets.Count = 1 Then
+                selectedSheet = 1
+                validInput = True
+            Else
+                validInput = False
+            End If
+
+            Dim sheetList As String
+            Dim i As Integer
+            Do While Not validInput
+                sheetList = "" ' Zurücksetzen, um Duplikate zu vermeiden
                 For i = 1 To xlWB.Worksheets.Count
                     sheetList = sheetList & i & " - " & xlWB.Worksheets(i).Name & vbCrLf
                 Next i
-                
-                ' Eingabeaufforderung mit kombinierter Anzeige
+
                 Dim selectedNumberStr As String
                 selectedNumberStr = InputBox( _
                     Prompt:=sheetList & vbCrLf & vbCrLf & _
-                           "Geben Sie die Nummer des gewünschten Arbeitsblatts ein, aus dem die Kontaktinformationen stammen:", _
+                           "Geben Sie die Nummer des gewünschten Arbeitsblatts ein:" & vbCrLf & _
+                           "(Zum Abbrechen bitte das Eingabefeld leer lassen und OK klicken)", _
                     Title:="Arbeitsblatt auswählen", _
                     Default:="")
-                
-                ' Abbruch bei leerer Eingabe
+
+                ' Abbruch, wenn keine Eingabe erfolgt
                 If selectedNumberStr = "" Then
                     GoTo Cleanup
                 End If
-                
-                ' Überprüfung der Eingabe
-                selectedSheet = Val(selectedNumberStr)
-                
-                If selectedSheet >= 1 And selectedSheet <= xlWB.Worksheets.Count Then
-                    validInput = True
+
+                If IsNumeric(selectedNumberStr) Then
+                    selectedSheet = CInt(selectedNumberStr)
+                    If selectedSheet >= 1 And selectedSheet <= xlWB.Worksheets.Count Then
+                        validInput = True
+                    Else
+                        MsgBox "Ungültige Eingabe! Bitte Zahl zwischen 1 und " & xlWB.Worksheets.Count & " eingeben.", vbExclamation
+                    End If
                 Else
-                    MsgBox "Ungültige Eingabe! Bitte Zahl zwischen 1 und " & xlWB.Worksheets.Count & " eingeben, um das Arbeitsblatt mit den Daten auszuwählen.", vbExclamation
+                    MsgBox "Ungültige Eingabe! Bitte eine Zahl eingeben.", vbExclamation
                 End If
-            Loop While Not validInput
+            Loop
             
             '******************************************************************************
             ' ** 4. Spaltenfindung (MODIFIKATIONSMÖGLICHKEIT: Suchbegriffe erweitern) **
@@ -292,14 +299,17 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             '******************************************************************************
             ' ** 5. Anfangszeile des Excel-Arbeitsblattes (MODIFIKATIONSMÖGLICHKEIT: standardmäßig erst ab einer bestimmten Zeile beginnen lassen) **
             '******************************************************************************
-            Dim useCustomStart As Boolean
-            useCustomStart = (MsgBox("Möchten Sie eine individuelle Startzeile angeben, ab der die Kontaktinformationen aus der Excel-Tabelle gezogen werden?", vbYesNo) = vbYes)
+            Dim useCustomStartRes As VbMsgBoxResult
+            useCustomStartRes = MsgBox("Befinden sich die Kontaktinformationen ab der 2. Excelzeile?", vbYesNoCancel)
+            If useCustomStartRes = vbCancel Then GoTo Cleanup
+
             Dim startRow As Long
-            If useCustomStart Then
+            If useCustomStartRes = vbNo Then
                 Dim inputRow As String
-                inputRow = InputBox("Geben Sie die Startzeile ein (z.B. 2), beachten Sie jedoch die Kopfzeile mit:", "Startzeile")
+                inputRow = InputBox("Geben Sie die Startzeile ein (z.B. 2), beachten Sie jedoch die Kopfzeile mit:" & vbCrLf & _
+                                    "(Zum Abbrechen das Feld leer lassen und OK klicken)", "Startzeile")
                 If inputRow = "" Then
-                    If MsgBox("Keine Eingabe. Vorgang abbrechen?", vbYesNo) = vbYes Then GoTo Cleanup
+                    If MsgBox("Keine Eingabe. Möchten Sie den Vorgang abbrechen?", vbYesNoCancel) = vbYes Then GoTo Cleanup
                     startRow = 2
                 Else
                     On Error Resume Next
@@ -315,27 +325,35 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             End If
             
             '******************************************************************************
-            ' ** 7. Anrede auswählen **
+            ' ** 6. Anrede auswählen **
             '******************************************************************************
+            Dim useCustomAnredeRes As VbMsgBoxResult
+            useCustomAnredeRes = MsgBox("Möchten Sie die voreingestellte formelle Anrede übernehmen?" & vbCrLf & _
+            "Diese wäre für Herr = 'Sehr geehrter Herr' und für Frau = 'Sehr geehrte Frau'.", vbYesNoCancel + vbQuestion, "Formelle Anrede")
+            If useCustomAnredeRes = vbCancel Then GoTo Cleanup
             Dim useCustomAnrede As Boolean
-            useCustomAnrede = (MsgBox("Möchten Sie die voreingestellte formelle Anrede übernehmen?" & vbCrLf & "Diese wäre für Herr = 'Sehr geehrter Herr' und für Frau = 'Sehr geehrte Frau'.", vbYesNo) = vbYes)
+            useCustomAnrede = (useCustomAnredeRes = vbYes)
             
             '******************************************************************************
-            ' ** 8. E-Mail-Versandoption: Direkt versenden oder nur generieren lassen **
+            ' ** 7. E-Mail-Versandoption: Direkt versenden oder nur generieren lassen **
             '******************************************************************************
+            Dim sendDirectlyRes As VbMsgBoxResult
+            sendDirectlyRes = MsgBox("Möchten Sie die E-Mails direkt versenden? Wenn nein, dann werden die E-Mails nur generiert und Sie senden jede E-Mail einzeln ab.", vbYesNoCancel + vbQuestion, "Versandoption")
+            If sendDirectlyRes = vbCancel Then GoTo Cleanup
             Dim sendDirectly As Boolean
-            sendDirectly = (MsgBox("Möchten Sie die E-Mails direkt versenden? Wenn nein, dann werden die E-Mails nur generiert und Sie senden jede E-Mail einzeln ab.", vbYesNo) = vbYes)
+            sendDirectly = (sendDirectlyRes = vbYes)
 
             If sendDirectly Then
                 Dim confirmSend As VbMsgBoxResult
-                confirmSend = MsgBox("Sind Sie sicher, dass alle E-Mails sofort nach ihrer Erstellung automatisch versendet werden sollen?", vbYesNo + vbQuestion, "Bestätigung E-Mail-Versand")
+                confirmSend = MsgBox("Sind Sie sicher, dass alle E-Mails sofort nach ihrer Erstellung automatisch versendet werden sollen?", vbYesNoCancel + vbQuestion, "Bestätigung E-Mail-Versand")
+                If confirmSend = vbCancel Then GoTo Cleanup
                 If confirmSend = vbNo Then
                     sendDirectly = False
                 End If
             End If
             
             '******************************************************************************
-            ' ** 9. HTML-Formatierung (MODIFIKATIONSMÖGLICHKEIT: CSS-Stile hinzufügen) **
+            ' ** 8. HTML-Formatierung (MODIFIKATIONSMÖGLICHKEIT: CSS-Stile hinzufügen) **
             '******************************************************************************
             objUndo.StartCustomRecord "VBA-Aktionen"
             
@@ -391,7 +409,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             doc.Content.Text = Replace(doc.Content.Text, vbLf, "<br>")
             
             '******************************************************************************
-            ' ** 10. Anhang-Validierung (MODIFIKATIONSMÖGLICHKEIT: erweiterter Umgang mit Netzwerkpfaden) **
+            ' ** 9. Anhang-Validierung (MODIFIKATIONSMÖGLICHKEIT: erweiterter Umgang mit Netzwerkpfaden) **
             '******************************************************************************
             Dim fehlerListe As String
             Dim lastRow As Long
@@ -420,7 +438,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             End If
             
             '******************************************************************************
-            ' ** 11. Platzhalter im Dokument ersetzen (MODIFIKATIONSMÖGLICHKEIT: Namen der Platzhalter anpassen) **
+            ' ** 10. Platzhalter im Dokument ersetzen (MODIFIKATIONSMÖGLICHKEIT: Namen der Platzhalter anpassen) **
             '******************************************************************************
             Dim fehlerMeldung As String
             Dim sentCount As Integer
@@ -456,7 +474,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 If SpalteNachname <> "" Then strBody = Replace(strBody, "%Nachname%", strNachname)
                 
                 '******************************************************************************
-                ' ** 12. E-Mail-Versand (MODIFIKATIONSMÖGLICHKEIT: Vorgang pausieren) **
+                ' ** 11. E-Mail-Versand (MODIFIKATIONSMÖGLICHKEIT: Vorgang pausieren) **
                 '******************************************************************************
                 On Error Resume Next
                 Set objMail = objOutlook.CreateItem(0)
@@ -497,7 +515,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Next
             
             '******************************************************************************
-            ' ** 13. Abschluss und Bereinigung **
+            ' ** 12. Abschluss und Bereinigung **
             '******************************************************************************
             objUndo.EndCustomRecord
             ActiveDocument.Undo
