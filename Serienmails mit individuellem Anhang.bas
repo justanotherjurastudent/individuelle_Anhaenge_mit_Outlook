@@ -49,9 +49,17 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             '******************************************************************************
             Dim selectedSheet As Integer
             Dim validInput As Boolean
-            validInput = False
             
-            Do
+            ' Automatische Auswahl, wenn nur ein Arbeitsblatt vorhanden
+            If xlWB.Worksheets.Count = 1 Then
+                selectedSheet = 1
+                validInput = True
+            Else
+                validInput = False
+            End If
+            
+            ' Schleife nur ausführen, wenn mehr als ein Arbeitsblatt existiert und solange keine valide Eingabe
+            Do While Not validInput
                 ' Arbeitsblätter auflisten
                 Dim sheetList As String
                 Dim i As Integer
@@ -60,11 +68,11 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     sheetList = sheetList & i & " - " & xlWB.Worksheets(i).Name & vbCrLf
                 Next i
                 
-                ' Eingabeaufforderung mit kombinierter Anzeige
+                ' Eingabeaufforderung anzeigen
                 Dim selectedNumberStr As String
                 selectedNumberStr = InputBox( _
                     Prompt:=sheetList & vbCrLf & vbCrLf & _
-                           "Geben Sie die Nummer des gewünschten Arbeitsblatts ein, aus dem die Kontaktinformationen stammen:", _
+                           "Geben Sie die Nummer des gewünschten Arbeitsblatts ein:", _
                     Title:="Arbeitsblatt auswählen", _
                     Default:="")
                 
@@ -79,9 +87,9 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 If selectedSheet >= 1 And selectedSheet <= xlWB.Worksheets.Count Then
                     validInput = True
                 Else
-                    MsgBox "Ungültige Eingabe! Bitte Zahl zwischen 1 und " & xlWB.Worksheets.Count & " eingeben, um das Arbeitsblatt mit den Daten auszuwählen.", vbExclamation
+                    MsgBox "Ungültige Eingabe! Bitte Zahl zwischen 1 und " & xlWB.Worksheets.Count & " eingeben.", vbExclamation
                 End If
-            Loop While Not validInput
+            Loop
             
             '******************************************************************************
             ' ** 4. Spaltenfindung (MODIFIKATIONSMÖGLICHKEIT: Suchbegriffe erweitern) **
