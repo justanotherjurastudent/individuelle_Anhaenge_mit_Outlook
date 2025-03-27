@@ -423,6 +423,10 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 
                 For Each file In arrFileNames
                     file = Trim(file)
+                    ' Entferne führende und abschließende Anführungszeichen, falls vorhanden
+                    If Left(file, 1) = """" Then file = Mid(file, 2)
+                    If Right(file, 1) = """" Then file = Left(file, Len(file) - 1)
+                    
                     If file <> "" Then
                         If Not fso.FileExists(file) Then
                             fehlerListe = fehlerListe & "Fehler: " & file & " existiert nicht (Zeile " & d & ")" & vbCrLf
