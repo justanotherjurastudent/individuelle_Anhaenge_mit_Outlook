@@ -178,7 +178,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Else
                 SpalteBCC = Chr(BCCRange.Column + 64)
             End If
-
+            
             ' Betreff-Spalte finden
             Dim BetreffRange As Excel.Range
             Set BetreffRange = xlWS.Cells.Find("Betreff", LookIn:=xlValues, LookAt:=xlWhole)
@@ -517,13 +517,14 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 If SpalteVorname <> "" Then strBody = Replace(strBody, "%Vorname%", strVorname)
                 If SpalteNachname <> "" Then strBody = Replace(strBody, "%Nachname%", strNachname)
                 
-                ' Standard-Schriftart aus dem gesamten Dokument ermitteln
+                ' Standard-Schriftart und -Schriftgröße aus dem gesamten Dokument ermitteln
                 Dim fontName As String
+                Dim fontSize As Single
                 Dim isUniqueFont As Boolean
-                Dim rngStory As Range
 
                 ' Starte mit dem Haupttext
                 fontName = ActiveDocument.Content.Font.Name
+                fontSize = ActiveDocument.Content.Font.Size
                 isUniqueFont = True
 
                 ' Durchlaufe alle StoryRanges (Haupttext, Kopf-/Fußzeilen, etc.)
@@ -535,23 +536,25 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     End If
                 Next sr
 
-                ' Falls unterschiedliche Schriftarten gefunden werden, verwende die Standardschriftart
+                ' Falls unterschiedliche Schriftarten gefunden werden, verwende die Standardschriftart und -größe aus dem Normal-Format
                 If Not isUniqueFont Then
                     fontName = ActiveDocument.Styles(wdStyleNormal).Font.Name
+                    fontSize = ActiveDocument.Styles(wdStyleNormal).Font.Size
                 End If
 
                 Set objMail = objOutlook.CreateItem(0)
-                ' Anschließend in den HTML-Code einbetten
+
+                ' Anschließend in den HTML-Code einbetten (Schriftgröße in pt)
                 Dim htmlTemplate As String
                 htmlTemplate = "<html>" & _
-                            "<head>" & _
-                            "<meta charset=""UTF-8"">" & _
-                            "<style type=""text/css"">" & _
-                            "body { font-family: " & fontName & "; }" & _
-                            "</style>" & _
-                            "</head>" & _
-                            "<body>" & strBody & "</body>" & _
-                            "</html>"
+                               "<head>" & _
+                               "<meta charset=""UTF-8"">" & _
+                               "<style type=""text/css"">" & _
+                               "body { font-family: " & fontName & "; font-size: " & fontSize & "pt; }" & _
+                               "</style>" & _
+                               "</head>" & _
+                               "<body>" & strBody & "</body>" & _
+                               "</html>"
 
                 objMail.HTMLBody = htmlTemplate
                 
