@@ -158,7 +158,27 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     GoTo Cleanup
                 End If
             End If
-            
+
+            ' CC-Spalte finden
+            Dim CCRange As Excel.Range
+            Dim SpalteCC As String
+            Set CCRange = xlWS.Cells.Find("CC", LookIn:=xlValues, LookAt:=xlWhole)
+            If CCRange Is Nothing Then
+                SpalteCC = InputBox("Spalte für CC (z.B. H oder leer lassen, wenn nicht vorhanden):")
+            Else
+                SpalteCC = Chr(CCRange.Column + 64)
+            End If
+
+            ' BCC-Spalte finden
+            Dim BCCRange As Excel.Range
+            Dim SpalteBCC As String
+            Set BCCRange = xlWS.Cells.Find("BCC", LookIn:=xlValues, LookAt:=xlWhole)
+            If BCCRange Is Nothing Then
+                SpalteBCC = InputBox("Spalte für BCC (z.B. I oder leer lassen, wenn nicht vorhanden):")
+            Else
+                SpalteBCC = Chr(BCCRange.Column + 64)
+            End If
+
             ' Betreff-Spalte finden
             Dim BetreffRange As Excel.Range
             Set BetreffRange = xlWS.Cells.Find("Betreff", LookIn:=xlValues, LookAt:=xlWhole)
@@ -185,26 +205,6 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Next term
             If AnhangRange Is Nothing Then
                 SpalteAttach = InputBox("Spalte für Anhänge (z.B. G oder leer lassen, wenn nicht vorhanden):")
-            End If
-
-            ' CC-Spalte finden
-            Dim CCRange As Excel.Range
-            Dim SpalteCC As String
-            Set CCRange = xlWS.Cells.Find("CC", LookIn:=xlValues, LookAt:=xlWhole)
-            If CCRange Is Nothing Then
-                SpalteCC = InputBox("Spalte für CC (z.B. H oder leer lassen, wenn nicht vorhanden):")
-            Else
-                SpalteCC = Chr(CCRange.Column + 64)
-            End If
-
-            ' BCC-Spalte finden
-            Dim BCCRange As Excel.Range
-            Dim SpalteBCC As String
-            Set BCCRange = xlWS.Cells.Find("BCC", LookIn:=xlValues, LookAt:=xlWhole)
-            If BCCRange Is Nothing Then
-                SpalteBCC = InputBox("Spalte für BCC (z.B. I oder leer lassen, wenn nicht vorhanden):")
-            Else
-                SpalteBCC = Chr(BCCRange.Column + 64)
             End If
             
             ' Benutzerbestätigung der Spalten
