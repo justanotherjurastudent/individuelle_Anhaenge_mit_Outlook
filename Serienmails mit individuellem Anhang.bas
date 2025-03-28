@@ -186,6 +186,26 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             If AnhangRange Is Nothing Then
                 SpalteAttach = InputBox("Spalte für Anhänge (z.B. G oder leer lassen, wenn nicht vorhanden):")
             End If
+
+            ' CC-Spalte finden
+            Dim CCRange As Excel.Range
+            Dim SpalteCC As String
+            Set CCRange = xlWS.Cells.Find("CC", LookIn:=xlValues, LookAt:=xlWhole)
+            If CCRange Is Nothing Then
+                SpalteCC = InputBox("Spalte für CC (z.B. H oder leer lassen, wenn nicht vorhanden):")
+            Else
+                SpalteCC = Chr(CCRange.Column + 64)
+            End If
+
+            ' BCC-Spalte finden
+            Dim BCCRange As Excel.Range
+            Dim SpalteBCC As String
+            Set BCCRange = xlWS.Cells.Find("BCC", LookIn:=xlValues, LookAt:=xlWhole)
+            If BCCRange Is Nothing Then
+                SpalteBCC = InputBox("Spalte für BCC (z.B. I oder leer lassen, wenn nicht vorhanden):")
+            Else
+                SpalteBCC = Chr(BCCRange.Column + 64)
+            End If
             
             ' Benutzerbestätigung der Spalten
             Dim confirmColumns As VbMsgBoxResult
@@ -199,8 +219,10 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                       "Anrede:           " & SpalteAnrede & vbCrLf & _
                       "Titel:                " & SpalteTitel & vbCrLf & _
                       "Vorname:        " & SpalteVorname & vbCrLf & _
-                      "Nachname:     " & SpalteNachname & vbCrLf & _
+                      "Nachname:     " & SpalteNachname & vbCrLf & vbCrLf & _
                       "E-Mail:             " & SpalteTo & vbCrLf & _
+                      "CC:                   " & SpalteCC & vbCrLf & _
+                      "BCC:                 " & SpalteBCC & vbCrLf & vbCrLf & _
                       "Betreff:            " & SpalteSubj & vbCrLf & _
                       "Anhang:         " & SpalteAttach & vbCrLf & vbCrLf & _
                       "Diese Spalten wurden zu den Kontaktinformationen gefunden. Sind Sie einverstanden?"
@@ -221,9 +243,11 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                                     "3 - Vorname" & vbCrLf & _
                                     "4 - Nachname" & vbCrLf & _
                                     "5 - E-Mail" & vbCrLf & _
-                                    "6 - Betreff" & vbCrLf & _
-                                    "7 - Anhang" & vbCrLf & vbCrLf
-                        
+                                    "6 - CC" & vbCrLf & _
+                                    "7 - BCC" & vbCrLf & _
+                                    "8 - Betreff" & vbCrLf & _
+                                    "9 - Anhang" & vbCrLf & vbCrLf
+
                         Dim selectedColumn As String
                         selectedColumn = InputBox( _
                             Prompt:=columnList & vbCrLf & "Geben Sie die Nummer der Spalte ein:", _
@@ -238,7 +262,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                         num = Val(selectedColumn)
                         
                         Select Case num
-                            Case 1 To 7 ' Nur gültige Ziffern
+                            Case 1 To 9 ' Nur gültige Ziffern
                                 Select Case num
                                     Case 1
                                         neueSpalte = InputBox("Neue Spalte für Anrede (z.B. A):", "Anrede")
@@ -276,13 +300,27 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                                             SpalteTo = neueSpalte
                                         End If
                                     Case 6
+                                        neueSpalte = InputBox("Neue Spalte für CC:", "CC")
+                                        If neueSpalte = "" Then
+                                            SpalteCC = ""
+                                        Else
+                                            SpalteCC = neueSpalte
+                                        End If
+                                    Case 7
+                                        neueSpalte = InputBox("Neue Spalte für BCC:", "BCC")
+                                        If neueSpalte = "" Then
+                                            SpalteBCC = ""
+                                        Else
+                                            SpalteBCC = neueSpalte
+                                        End If
+                                    Case 8
                                         neueSpalte = InputBox("Neue Spalte für Betreff:", "Betreff")
                                         If neueSpalte = "" Then
                                             SpalteSubj = ""
                                         Else
                                             SpalteSubj = neueSpalte
                                         End If
-                                    Case 7
+                                    Case 9
                                         neueSpalte = InputBox("Neue Spalte für Anhänge:", "Anhang")
                                         If neueSpalte = "" Then
                                             SpalteAttach = ""
@@ -423,6 +461,10 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 
                 For Each file In arrFileNames
                     file = Trim(file)
+                    ' Entferne führende und abschließende Anführungszeichen, falls vorhanden
+                    If Left(file, 1) = """" Then file = Mid(file, 2)
+                    If Right(file, 1) = """" Then file = Left(file, Len(file) - 1)
+                    
                     If file <> "" Then
                         If Not fso.FileExists(file) Then
                             fehlerListe = fehlerListe & "Fehler: " & file & " existiert nicht (Zeile " & d & ")" & vbCrLf
@@ -447,7 +489,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             For i = startRow To lastRow
                 Dim strTo As String, strSubj As String, strBody As String
                 Dim strAnrede As String, strVorname As String, strNachname As String
-                Dim strAttach As String
+                Dim strAttach As String, strCC As String, strBCC As String
                 
                 ' Daten aus Excel lesen (mit Fehlertoleranz)
                 strTo = IIf(SpalteTo <> "", xlWS.Range(SpalteTo & i).Value, "")
@@ -456,6 +498,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 strVorname = IIf(SpalteVorname <> "", xlWS.Range(SpalteVorname & i).Value, "")
                 strNachname = IIf(SpalteNachname <> "", xlWS.Range(SpalteNachname & i).Value, "")
                 strAttach = IIf(SpalteAttach <> "", xlWS.Range(SpalteAttach & i).Value, "")
+                strCC = IIf(SpalteCC <> "", xlWS.Range(SpalteCC & i).Value, "")
+                strBCC = IIf(SpalteBCC <> "", xlWS.Range(SpalteBCC & i).Value, "")
                 
                 ' Anrede-Behandlung
                 If Not useCustomAnrede Then
@@ -473,27 +517,70 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 If SpalteVorname <> "" Then strBody = Replace(strBody, "%Vorname%", strVorname)
                 If SpalteNachname <> "" Then strBody = Replace(strBody, "%Nachname%", strNachname)
                 
+                ' Standard-Schriftart aus dem gesamten Dokument ermitteln
+                Dim fontName As String
+                Dim isUniqueFont As Boolean
+                Dim rngStory As Range
+
+                ' Starte mit dem Haupttext
+                fontName = ActiveDocument.Content.Font.Name
+                isUniqueFont = True
+
+                ' Durchlaufe alle StoryRanges (Haupttext, Kopf-/Fußzeilen, etc.)
+                Dim sr As Range
+                For Each sr In ActiveDocument.StoryRanges
+                    If sr.Font.Name <> fontName Then
+                        isUniqueFont = False
+                        Exit For
+                    End If
+                Next sr
+
+                ' Falls unterschiedliche Schriftarten gefunden werden, verwende die Standardschriftart
+                If Not isUniqueFont Then
+                    fontName = ActiveDocument.Styles(wdStyleNormal).Font.Name
+                End If
+
+                Set objMail = objOutlook.CreateItem(0)
+                ' Anschließend in den HTML-Code einbetten
+                Dim htmlTemplate As String
+                htmlTemplate = "<html>" & _
+                            "<head>" & _
+                            "<meta charset=""UTF-8"">" & _
+                            "<style type=""text/css"">" & _
+                            "body { font-family: " & fontName & "; }" & _
+                            "</style>" & _
+                            "</head>" & _
+                            "<body>" & strBody & "</body>" & _
+                            "</html>"
+
+                objMail.HTMLBody = htmlTemplate
+                
                 '******************************************************************************
                 ' ** 11. E-Mail-Versand (MODIFIKATIONSMÖGLICHKEIT: Vorgang pausieren) **
                 '******************************************************************************
                 On Error Resume Next
-                Set objMail = objOutlook.CreateItem(0)
                 With objMail
                     .To = strTo
+                    .CC = strCC
+                    .BCC = strBCC
                     .Subject = strSubj
-                    .HTMLBody = strBody
+                    .HTMLBody = htmlTemplate
                     .BodyFormat = 2
                     
                     ' Anhänge hinzufügen
                     If strAttach <> "" Then
                         Dim attachArray() As String
                         attachArray = Split(strAttach, ",")
-                        For Each file In attachArray
-                            file = Trim(file)
-                            If file <> "" Then
-                                .Attachments.Add file
+                        Dim attFile As Variant
+                        For Each attFile In attachArray
+                            attFile = Trim(attFile)
+                            ' Entferne führende und abschließende Anführungszeichen, falls vorhanden
+                            If Left(attFile, 1) = """" Then attFile = Mid(attFile, 2)
+                            If Right(attFile, 1) = """" Then attFile = Left(attFile, Len(attFile) - 1)
+                            If attFile <> "" Then
+                                .Attachments.Add attFile
                             End If
-                        Next
+                        Next attFile
                     End If
                     
                     ' E-Mail senden oder anzeigen
