@@ -6,6 +6,9 @@ Für eine ausführliche Beschreibung, wie damit umzugehen ist, schaue dafür auf
 ### Update am 25.03.2025
 Der Code wurde stark angepasst, ist nun entschlackter und robuster. Zusätzlich wurden viele Kommentare an den Code geschrieben, um ihn verstehen zu können.
 
+### Update am 08.05.2025
+Zusätzlich kann nun noch ein Unternehemsname verwendet werden. In der Excel-Tabelle muss diese Spalte hierfür den NAmen "Unternehmen" oder "Unternehmensnamen" haben, um automatisch erkannt zu werden. In dem Word-Dokument wird der Unternehmensname über den Platzhalter %Unternehmen% eingefügt.
+
 Supporte meinen frei verfügbaren Content :)
 
 <a href="https://www.buymeacoffee.com/justanotherjurastudent" target="_blank">
