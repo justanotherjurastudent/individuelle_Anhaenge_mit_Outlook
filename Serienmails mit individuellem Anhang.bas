@@ -1,4 +1,3 @@
-Attribute VB_Name = "Serienmails"
 '******************************************************************************
 ' ** MODIFIKATIONS-HINWEISE (ZUR EINFÜGUNG AM ANFANG DES CODES) **
 '******************************************************************************
@@ -103,6 +102,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Dim SpalteAnrede As String, SpalteTitel As String
             Dim SpalteVorname As String, SpalteNachname As String
             Dim SpalteTo As String, SpalteSubj As String, SpalteAttach As String
+            Dim SpalteUnternehmen As String  ' Neue Variable für die Unternehmen-Spalte
             
             ' Anrede-Spalte finden
             Dim AnredeRange As Excel.Range
@@ -138,6 +138,21 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 SpalteNachname = InputBox("Spalte für Nachnamen (z.B. D oder leer lassen, wenn nicht vorhanden):")
             Else
                 SpalteNachname = Chr(NachnameRange.Column + 64)
+            End If
+
+            ' Unternehmen-Spalte finden
+            Dim SuchbegriffeUnternehmen As Variant
+            SuchbegriffeUnternehmen = Array("Unternehmen", "Unternehmensname")
+            Dim UnternehmenRange As Excel.Range
+            For Each term In SuchbegriffeUnternehmen
+                Set UnternehmenRange = xlWS.Cells.Find(term, LookIn:=xlValues, LookAt:=xlWhole)
+                If Not UnternehmenRange Is Nothing Then
+                    SpalteUnternehmen = Chr(UnternehmenRange.Column + 64)
+                    Exit For
+                End If
+            Next term
+            If UnternehmenRange Is Nothing Then
+                SpalteUnternehmen = InputBox("Spalte für Unternehmen (z.B. X oder leer lassen, wenn nicht vorhanden):")
             End If
             
             ' E-Mail-Spalte finden
@@ -216,10 +231,11 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 ' Spaltenanzeige mit fixen Abständen
                 Dim msg As String
                 msg = "Datengruppen:" & vbCrLf & _
-                      "Anrede:           " & SpalteAnrede & vbCrLf & _
-                      "Titel:                " & SpalteTitel & vbCrLf & _
-                      "Vorname:        " & SpalteVorname & vbCrLf & _
-                      "Nachname:     " & SpalteNachname & vbCrLf & vbCrLf & _
+                      "Anrede:             " & SpalteAnrede & vbCrLf & _
+                      "Titel:                  " & SpalteTitel & vbCrLf & _
+                      "Vorname:          " & SpalteVorname & vbCrLf & _
+                      "Nachname:       " & SpalteNachname & vbCrLf & _
+                      "Unternehmen:  " & SpalteUnternehmen & vbCrLf & vbCrLf & _
                       "E-Mail:             " & SpalteTo & vbCrLf & _
                       "CC:                   " & SpalteCC & vbCrLf & _
                       "BCC:                 " & SpalteBCC & vbCrLf & vbCrLf & _
@@ -235,23 +251,23 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     Case vbCancel
                         GoTo Cleanup
                     Case vbNo
-                        ' Korrekturschleife mit explizitem Abbruch über "Abbrechen"-Button
+                        ' Aktualisierte Liste inkl. Unternehmen (Nummer 5)
                         Dim columnList As String
                         columnList = "Wählen Sie die Spalte zur Korrektur:" & vbCrLf & _
-                                    "1 - Anrede" & vbCrLf & _
-                                    "2 - Titel" & vbCrLf & _
-                                    "3 - Vorname" & vbCrLf & _
-                                    "4 - Nachname" & vbCrLf & _
-                                    "5 - E-Mail" & vbCrLf & _
-                                    "6 - CC" & vbCrLf & _
-                                    "7 - BCC" & vbCrLf & _
-                                    "8 - Betreff" & vbCrLf & _
-                                    "9 - Anhang" & vbCrLf & vbCrLf
+                                     "1 - Anrede" & vbCrLf & _
+                                     "2 - Titel" & vbCrLf & _
+                                     "3 - Vorname" & vbCrLf & _
+                                     "4 - Nachname" & vbCrLf & _
+                                     "5 - Unternehmen" & vbCrLf & _
+                                     "6 - E-Mail" & vbCrLf & _
+                                     "7 - CC" & vbCrLf & _
+                                     "8 - BCC" & vbCrLf & _
+                                     "9 - Betreff" & vbCrLf & _
+                                     "10 - Anhang" & vbCrLf & vbCrLf
 
                         Dim selectedColumn As String
-                        selectedColumn = InputBox( _
-                            Prompt:=columnList & vbCrLf & "Geben Sie die Nummer der Spalte ein:", _
-                            Title:="Spalte korrigieren")
+                        selectedColumn = InputBox(Prompt:=columnList & vbCrLf & "Geben Sie die Nummer der Spalte ein:", _
+                                                  Title:="Spalte korrigieren")
                         
                         If selectedColumn = "" Then ' Abbruch über 'Abbrechen'-Button
                             GoTo Cleanup
@@ -262,7 +278,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                         num = Val(selectedColumn)
                         
                         Select Case num
-                            Case 1 To 9 ' Nur gültige Ziffern
+                            Case 1 To 10
                                 Select Case num
                                     Case 1
                                         neueSpalte = InputBox("Neue Spalte für Anrede (z.B. A):", "Anrede")
@@ -293,34 +309,41 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                                             SpalteNachname = neueSpalte
                                         End If
                                     Case 5
+                                        neueSpalte = InputBox("Neue Spalte für Unternehmen:", "Unternehmen")
+                                        If neueSpalte = "" Then
+                                            SpalteUnternehmen = ""
+                                        Else
+                                            SpalteUnternehmen = neueSpalte
+                                        End If
+                                    Case 6
                                         neueSpalte = InputBox("Neue Spalte für E-Mail:", "E-Mail")
                                         If neueSpalte = "" Then
                                             SpalteTo = ""
                                         Else
                                             SpalteTo = neueSpalte
                                         End If
-                                    Case 6
+                                    Case 7
                                         neueSpalte = InputBox("Neue Spalte für CC:", "CC")
                                         If neueSpalte = "" Then
                                             SpalteCC = ""
                                         Else
                                             SpalteCC = neueSpalte
                                         End If
-                                    Case 7
+                                    Case 8
                                         neueSpalte = InputBox("Neue Spalte für BCC:", "BCC")
                                         If neueSpalte = "" Then
                                             SpalteBCC = ""
                                         Else
                                             SpalteBCC = neueSpalte
                                         End If
-                                    Case 8
+                                    Case 9
                                         neueSpalte = InputBox("Neue Spalte für Betreff:", "Betreff")
                                         If neueSpalte = "" Then
                                             SpalteSubj = ""
                                         Else
                                             SpalteSubj = neueSpalte
                                         End If
-                                    Case 9
+                                    Case 10
                                         neueSpalte = InputBox("Neue Spalte für Anhänge:", "Anhang")
                                         If neueSpalte = "" Then
                                             SpalteAttach = ""
@@ -516,6 +539,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 If SpalteTitel <> "" Then strBody = Replace(strBody, "%Titel%", xlWS.Range(SpalteTitel & i).Value)
                 If SpalteVorname <> "" Then strBody = Replace(strBody, "%Vorname%", strVorname)
                 If SpalteNachname <> "" Then strBody = Replace(strBody, "%Nachname%", strNachname)
+                If SpalteUnternehmen <> "" Then strBody = Replace(strBody, "%Unternehmen%", xlWS.Range(SpalteUnternehmen & i).Value)
                 
                 ' Standard-Schriftart und -Schriftgröße aus dem gesamten Dokument ermitteln
                 Dim fontName As String
