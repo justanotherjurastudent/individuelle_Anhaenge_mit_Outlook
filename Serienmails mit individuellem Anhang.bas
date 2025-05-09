@@ -231,10 +231,10 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 ' Spaltenanzeige mit fixen Abständen
                 Dim msg As String
                 msg = "Datengruppen:" & vbCrLf & _
-                      "Anrede:             " & SpalteAnrede & vbCrLf & _
-                      "Titel:                  " & SpalteTitel & vbCrLf & _
-                      "Vorname:          " & SpalteVorname & vbCrLf & _
-                      "Nachname:       " & SpalteNachname & vbCrLf & _
+                      "Anrede:           " & SpalteAnrede & vbCrLf & _
+                      "Titel:                " & SpalteTitel & vbCrLf & _
+                      "Vorname:        " & SpalteVorname & vbCrLf & _
+                      "Nachname:     " & SpalteNachname & vbCrLf & _
                       "Unternehmen:  " & SpalteUnternehmen & vbCrLf & vbCrLf & _
                       "E-Mail:             " & SpalteTo & vbCrLf & _
                       "CC:                   " & SpalteCC & vbCrLf & _
@@ -515,22 +515,57 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 Dim strAttach As String, strCC As String, strBCC As String
                 
                 ' Daten aus Excel lesen (mit Fehlertoleranz)
-                strTo = IIf(SpalteTo <> "", xlWS.Range(SpalteTo & i).Value, "")
-                strSubj = IIf(SpalteSubj <> "", xlWS.Range(SpalteSubj & i).Value, "")
-                strAnrede = IIf(SpalteAnrede <> "", xlWS.Range(SpalteAnrede & i).Value, "")
-                strVorname = IIf(SpalteVorname <> "", xlWS.Range(SpalteVorname & i).Value, "")
-                strNachname = IIf(SpalteNachname <> "", xlWS.Range(SpalteNachname & i).Value, "")
-                strAttach = IIf(SpalteAttach <> "", xlWS.Range(SpalteAttach & i).Value, "")
-                strCC = IIf(SpalteCC <> "", xlWS.Range(SpalteCC & i).Value, "")
-                strBCC = IIf(SpalteBCC <> "", xlWS.Range(SpalteBCC & i).Value, "")
+                If SpalteTo <> "" Then
+                    strTo = xlWS.Range(SpalteTo & i).Value
+                Else
+                    strTo = ""
+                End If
+                If SpalteSubj <> "" Then
+                    strSubj = xlWS.Range(SpalteSubj & i).Value
+                Else
+                    strSubj = ""
+                End If
+                If SpalteAnrede <> "" Then
+                    strAnrede = xlWS.Range(SpalteAnrede & i).Value
+                Else
+                    strAnrede = ""
+                End If
+                If SpalteVorname <> "" Then
+                    strVorname = xlWS.Range(SpalteVorname & i).Value
+                Else
+                    strVorname = ""
+                End If
+                If SpalteNachname <> "" Then
+                    strNachname = xlWS.Range(SpalteNachname & i).Value
+                Else
+                    strNachname = ""
+                End If
+                If SpalteAttach <> "" Then
+                    strAttach = xlWS.Range(SpalteAttach & i).Value
+                Else
+                    strAttach = ""
+                End If
+                If SpalteCC <> "" Then
+                    strCC = xlWS.Range(SpalteCC & i).Value
+                Else
+                    strCC = ""
+                End If
+                If SpalteBCC <> "" Then
+                    strBCC = xlWS.Range(SpalteBCC & i).Value
+                Else
+                    strBCC = ""
+                End If
                 
                 ' Anrede-Behandlung
-                If Not useCustomAnrede Then
+                If useCustomAnrede Then
                     Select Case strAnrede
                         Case "Frau": strAnrede = "Sehr geehrte Frau"
                         Case "Herr": strAnrede = "Sehr geehrter Herr"
                         Case Else: strAnrede = ""
                     End Select
+                Else
+                    ' Bei Nein: Zellinhalt unverändert nutzen.
+                    ' strAnrede bleibt wie gelesen.
                 End If
                 
                 ' Platzhalter ersetzen (nur wenn Spalte definiert)
