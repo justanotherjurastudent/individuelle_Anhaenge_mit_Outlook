@@ -7,7 +7,10 @@ Für eine ausführliche Beschreibung, wie damit umzugehen ist, schaue dafür auf
 Der Code wurde stark angepasst, ist nun entschlackter und robuster. Zusätzlich wurden viele Kommentare an den Code geschrieben, um ihn verstehen zu können.
 
 ### Update am 08.05.2025
-Zusätzlich kann nun noch ein Unternehemsname verwendet werden. In der Excel-Tabelle muss diese Spalte hierfür den NAmen "Unternehmen" oder "Unternehmensnamen" haben, um automatisch erkannt zu werden. In dem Word-Dokument wird der Unternehmensname über den Platzhalter %Unternehmen% eingefügt.
+Zusätzlich kann nun noch ein Unternehmensname verwendet werden. In der Excel-Tabelle muss diese Spalte hierfür den NAmen "Unternehmen" oder "Unternehmensnamen" haben, um automatisch erkannt zu werden. In dem Word-Dokument wird der Unternehmensname über den Platzhalter %Unternehmen% eingefügt.
+
+### Update am 09.05.2025
+Wichtiges Update: Die formelle Anrede wird nun korrekt gesetzt, wenn sich in der Excel-Zelle Herr oder Frau befindet. Auch müssen nicht alle möglichen Spalten (zB Vorname oder BCC) existieren, um die E-Mail zu generieren.
 
 Supporte meinen frei verfügbaren Content :)
 
