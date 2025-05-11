@@ -12,6 +12,9 @@ Zusätzlich kann nun noch ein Unternehmensname verwendet werden. In der Excel-Ta
 ### Update am 09.05.2025
 Wichtiges Update: Die formelle Anrede wird nun korrekt gesetzt, wenn sich in der Excel-Zelle Herr oder Frau befindet. Auch müssen nicht alle möglichen Spalten (zB Vorname oder BCC) existieren, um die E-Mail zu generieren.
 
+### Update am 11.05.2025
+Nun werden auch (un)geordnete Listen (ggf. mit mehreren Ebenen) sowie abweichende Schriftfarben und Texthervorhebungsfarben in die E-Mail übernommen.
+
 Supporte meinen frei verfügbaren Content :)
 
 <a href="https://www.buymeacoffee.com/justanotherjurastudent" target="_blank">
