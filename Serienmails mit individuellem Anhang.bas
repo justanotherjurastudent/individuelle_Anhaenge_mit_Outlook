@@ -39,6 +39,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
         .Filters.Add "Excel-Dateien", "*.xl*" ' <--- Hier können Sie weitere Dateitypen hinzufügen (z.B. "*.csv")
         .AllowMultiSelect = False
         .ButtonName = "Auswählen"
+        .InitialFileName = CreateObject("WScript.Shell").SpecialFolders("MyDocuments") & "\"
         If .Show = -1 Then
             Pfad = .SelectedItems(1)
             Set xlWB = xlApp.Workbooks.Open(Pfad)
