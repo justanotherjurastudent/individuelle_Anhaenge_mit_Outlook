@@ -231,16 +231,16 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 ' Spaltenanzeige mit fixen Abständen
                 Dim msg As String
                 msg = "Datengruppen:" & vbCrLf & _
-                      "Anrede:           " & SpalteAnrede & vbCrLf & _
-                      "Titel:                " & SpalteTitel & vbCrLf & _
-                      "Vorname:        " & SpalteVorname & vbCrLf & _
-                      "Nachname:     " & SpalteNachname & vbCrLf & _
-                      "Unternehmen:  " & SpalteUnternehmen & vbCrLf & vbCrLf & _
-                      "E-Mail:             " & SpalteTo & vbCrLf & _
-                      "CC:                   " & SpalteCC & vbCrLf & _
-                      "BCC:                 " & SpalteBCC & vbCrLf & vbCrLf & _
-                      "Betreff:            " & SpalteSubj & vbCrLf & _
-                      "Anhang:         " & SpalteAttach & vbCrLf & vbCrLf & _
+                      "Anrede:             " & SpalteAnrede & vbCrLf & _
+                      "Titel:                  " & SpalteTitel & vbCrLf & _
+                      "Vorname:          " & SpalteVorname & vbCrLf & _
+                      "Nachname:       " & SpalteNachname & vbCrLf & _
+                      "Unternehmen:    " & SpalteUnternehmen & vbCrLf & vbCrLf & _
+                      "E-Mail:               " & SpalteTo & vbCrLf & _
+                      "CC:                     " & SpalteCC & vbCrLf & _
+                      "BCC:                   " & SpalteBCC & vbCrLf & vbCrLf & _
+                      "Betreff:              " & SpalteSubj & vbCrLf & _
+                      "Anhang:           " & SpalteAttach & vbCrLf & vbCrLf & _
                       "Diese Spalten wurden zu den Kontaktinformationen gefunden. Sind Sie einverstanden?"
                 
                 confirmColumns = MsgBox(msg, vbQuestion + vbYesNoCancel, "Spaltenbestätigung")
@@ -416,23 +416,23 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             '******************************************************************************
             ' ** 8. HTML-Formatierung (MODIFIKATIONSMÖGLICHKEIT: CSS-Stile hinzufügen) **
             '******************************************************************************
-            objUndo.StartCustomRecord "VBA-Aktionen"
-            
+            ' UndoRecord für Rückgängig-Block starten
+            On Error Resume Next
+            If Not objUndo Is Nothing Then
+                objUndo.StartCustomRecord "Serienmail-Änderungen"
+            End If
+            On Error GoTo 0
+
             ' Umschreiben von Hyperlinks
             For Each HL In ActiveDocument.Hyperlinks
                 HL.Range.Text = "<a href=""" & HL.Address & """>" & HL.Range.Text & "</a>"
             Next
-            
+
             ' HTML-Tags für Formate (Fett, Kursiv, etc.)
             Dim rng As Range
             Set rng = doc.Content
-            With rng.Find
-                .ClearFormatting
-                .Forward = True
-                .Wrap = wdFindStop
-            End With
-            
-            ' Alle Formate in einem Loop verarbeiten
+
+            ' Erst Formatierungen verarbeiten
             Dim formatSettings() As Variant
             formatSettings = Array( _
                 Array("Bold", True, "<b>", "</b>"), _
@@ -443,9 +443,13 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 Array("SmallCaps", True, "<small>", "</small>"), _
                 Array("AllCaps", True, "<big>", "</big>") _
             )
-            
+
+            ' Weitere Formatierungen verarbeiten
             For Each setting In formatSettings
                 With rng.Find
+                    .ClearFormatting
+                    .Forward = True
+                    .Wrap = wdFindStop
                     Select Case setting(0)
                         Case "Bold": .Font.Bold = setting(1)
                         Case "Italic": .Font.Italic = setting(1)
@@ -464,11 +468,218 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     Loop
                 End With
             Next
+
+            ' Farben und Hervorhebungen verarbeiten (Separater Range)
+            Dim rngFontColor As Range
+            Set rngFontColor = doc.Content
+            Dim rngMarkColor As Range
+            Set rngMarkColor = doc.Content
+
+            ' Farben-Einstellungen
+            Dim colorSettings As Variant
+            colorSettings = Array( _
+                Array(wdColorRed, "#FF0000", "color"), _
+                Array(wdColorBlue, "#0000FF", "color"), _
+                Array(wdColorGreen, "#008000", "color"), _
+                Array(wdColorYellow, "#FFFF00", "color"), _
+                Array(wdColorMagenta, "#FF00FF", "color"), _
+                Array(wdColorCyan, "#00FFFF", "color") _
+            )
+
+            ' Hervorhebungsfarben-Zuordnung
+            Dim highlightColors As Variant
+            highlightColors = Array( _
+                Array(wdYellow, "#FFFF00"), _
+                Array(wdBrightGreen, "#00FF00"), _
+                Array(wdTurquoise, "#00FFFF"), _
+                Array(wdPink, "#FF00FF"), _
+                Array(wdBlue, "#0000FF"), _
+                Array(wdRed, "#FF0000"), _
+                Array(wdDarkBlue, "#000080"), _
+                Array(wdTeal, "#008080"), _
+                Array(wdGreen, "#008000"), _
+                Array(wdViolet, "#800080"), _
+                Array(wdDarkRed, "#800000"), _
+                Array(wdDarkYellow, "#808000"), _
+                Array(wdGray50, "#808080"), _
+                Array(wdGray25, "#C0C0C0"), _
+                Array(wdBlack, "#000000") _
+            )
+
+            ' Zuerst Farben verarbeiten
+            Dim cs As Variant
+            For Each cs In colorSettings
+                With rngFontColor.Find
+                    .ClearFormatting
+                    .Font.Color = cs(0)
+                    .Forward = True
+                    .Wrap = wdFindStop
+                    .Format = True
+                    .Text = ""
+                    .Replacement.Text = ""
+                    .Execute
+                    Do While .Found
+                        rngFontColor.InsertBefore "<span style=""color: " & cs(1) & ";"">"
+                        rngFontColor.InsertAfter "</span>"
+                        .Execute
+                    Loop
+                End With
+            Next cs
+
+            ' Dann Hervorhebungen verarbeiten
+            With rngMarkColor.Find
+                .ClearFormatting
+                .Forward = True
+                .Wrap = wdFindStop
+                .Format = True
+                .Replacement.ClearFormatting
+                .Text = ""
+                .Replacement.Text = ""
+                .Highlight = True
+                
+                .Execute
+                Do While .Found
+                    Dim highlightColor As String
+                    highlightColor = ""
+                    
+                    ' Finde die passende Farbe
+                    Dim hc As Variant
+                    For Each hc In highlightColors
+                        If rngMarkColor.HighlightColorIndex = hc(0) Then
+                            highlightColor = hc(1)
+                            Exit For
+                        End If
+                    Next hc
+                    
+                    If highlightColor <> "" Then
+                        rngMarkColor.InsertBefore "<span style='background-color: " & highlightColor & ";'>"
+                        rngMarkColor.InsertAfter "</span>"
+                    End If
+                    
+                    .Execute
+                Loop
+            End With
+
+
+            ' Dann Listen verarbeiten
+            Dim para As Paragraph
+            Dim htmlContent As String
+            Dim currentLevel As Integer
+            Dim lastLevel As Integer
+            Dim listLevels(9) As Integer  ' Array zum Speichern der Listentypen (0=none, 1=bullet, 2=number, 3=multilevel)
+            htmlContent = ""
             
-            ' Zeilenumbrüche ersetzen
-            doc.Content.Text = Replace(doc.Content.Text, vbCr, "<br><br>")
-            doc.Content.Text = Replace(doc.Content.Text, vbLf, "<br>")
+            currentLevel = 0
+            lastLevel = 0
             
+            For Each para In doc.Paragraphs
+                ' Entferne nur die Absatzmarke am Ende
+                Dim paraText As String
+                paraText = para.Range.Text
+                If Len(paraText) > 0 Then
+                    If Right(paraText, 1) = vbCr Then
+                        paraText = Left(paraText, Len(paraText) - 1)
+                    End If
+                End If
+                
+                ' Prüfe ob der Absatz Teil einer Liste ist
+                If para.Range.ListFormat.ListType <> wdListNoNumbering Then
+                    currentLevel = para.Range.ListFormat.ListLevelNumber
+                    
+                    ' Bestimme den Listentyp dieser Ebene
+                    Dim listType As Integer
+                    Select Case True
+                        Case para.Range.ListFormat.ListType = wdListBullet
+                            listType = 1
+                        Case para.Range.ListFormat.ListType = wdListSimpleNumbering
+                            listType = 2
+                        Case para.Range.ListFormat.ListType = wdListMultiLevel
+                            ' Prüfe den tatsächlichen Typ dieser Ebene
+                            If para.Range.ListFormat.ListString Like "*•*" Then
+                                listType = 1
+                            Else
+                                listType = 2
+                            End If
+                        Case Else
+                            listType = 0
+                    End Select
+                    
+                    ' Behandle Änderungen in der Verschachtelungsebene
+                    If currentLevel > lastLevel Then
+                        ' Neue tiefere Ebene
+                        listLevels(currentLevel) = listType
+                        If listType = 1 Then
+                            htmlContent = htmlContent & "<ul style='margin: 0; padding-left: 20px;'>"
+                        Else
+                            htmlContent = htmlContent & "<ol style='margin: 0; padding-left: 20px;'>"
+                        End If
+                    ElseIf currentLevel < lastLevel Then
+                        ' Zurück zu höherer Ebene - schließe Zwischenebenen
+                        For i = lastLevel To currentLevel + 1 Step -1
+                            If listLevels(i) = 1 Then
+                                htmlContent = htmlContent & "</ul>"
+                            Else
+                                htmlContent = htmlContent & "</ol>"
+                            End If
+                        Next i
+                    ElseIf currentLevel > 0 And listLevels(currentLevel) <> listType Then
+                        ' Gleiche Ebene aber anderer Listentyp
+                        If listLevels(currentLevel) = 1 Then
+                            htmlContent = htmlContent & "</ul><ol style='margin: 0; padding-left: 20px;'>"
+                        Else
+                            htmlContent = htmlContent & "</ol><ul style='margin: 0; padding-left: 20px;'>"
+                        End If
+                        listLevels(currentLevel) = listType
+                    End If
+                    
+                    ' Listenelement hinzufügen
+                    htmlContent = htmlContent & "<li style='margin-bottom: 6px;'>" & paraText & "</li>"
+                    
+                Else
+                    ' Kein Listenelement - schließe alle offenen Listen
+                    Dim j As Integer
+                    For j = lastLevel To 1 Step -1
+                        If listLevels(j) = 1 Then
+                            htmlContent = htmlContent & "</ul>"
+                        Else
+                            htmlContent = htmlContent & "</ol>"
+                        End If
+                        listLevels(j) = 0
+                    Next j
+                    
+                    ' Extra Zeilenumbruch nach Liste einfügen wenn vorher eine Liste war
+                    If lastLevel > 0 Then
+                        htmlContent = htmlContent & "<br>"
+                    End If
+                    
+                    ' Normaler Text
+                    If para.Next Is Nothing Then
+                        htmlContent = htmlContent & paraText
+                    ElseIf para.Range.Text = vbCr Then
+                        htmlContent = htmlContent & "<br>"
+                    Else
+                        htmlContent = htmlContent & paraText & "<br><br>"
+                    End If
+                    
+                    currentLevel = 0
+                End If
+                
+                lastLevel = currentLevel
+            Next para
+            
+            ' Schließe noch offene Listen
+            Dim k As Integer
+            For k = lastLevel To 1 Step -1
+                If listLevels(k) = 1 Then
+                    htmlContent = htmlContent & "</ul>"
+                Else
+                    htmlContent = htmlContent & "</ol>"
+                End If
+            Next k
+            
+            ' Ersetze den Dokumentinhalt mit dem HTML-formatierten Text
+            doc.Content.Text = htmlContent
+
             '******************************************************************************
             ' ** 9. Anhang-Validierung (MODIFIKATIONSMÖGLICHKEIT: erweiterter Umgang mit Netzwerkpfaden) **
             '******************************************************************************
@@ -666,9 +877,14 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             '******************************************************************************
             ' ** 12. Abschluss und Bereinigung **
             '******************************************************************************
-            objUndo.EndCustomRecord
-            ActiveDocument.Undo
-            
+            ' Am Ende: Alle Änderungen rückgängig machen
+            On Error Resume Next 
+            If Not objUndo Is Nothing Then
+                objUndo.EndCustomRecord
+                doc.Undo
+            End If
+            On Error GoTo 0
+
             If fehlerMeldung <> "" Then
                 MsgBox "Fehler aufgetreten:" & vbCrLf & fehlerMeldung
             Else
