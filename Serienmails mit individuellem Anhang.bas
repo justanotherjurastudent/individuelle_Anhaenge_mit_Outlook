@@ -34,6 +34,30 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
     Dim fso As Object                 ' Dateisystem-Objekt für Dateiprüfung
     Set fso = CreateObject("Scripting.FileSystemObject")
     
+    ' Prüfen ob Outlook läuft
+    Dim outlookRunning As Boolean
+    outlookRunning = False
+    
+    ' Prozesse durchsuchen nach OUTLOOK.EXE
+    Dim objWMIService, colProcesses
+    Set objWMIService = GetObject("winmgmts:\\.\root\CIMV2")
+    Set colProcesses = objWMIService.ExecQuery("SELECT * FROM Win32_Process WHERE Name = 'OUTLOOK.EXE'")
+    
+    If colProcesses.Count > 0 Then
+        outlookRunning = True
+    End If
+    
+    If Not outlookRunning Then
+        Dim outlookResponse As VbMsgBoxResult
+        outlookResponse = MsgBox("Outlook scheint nicht geöffnet zu sein. Normalerweise muss Outlook geöffnet sein, um E-Mails zu versenden." & vbCrLf & _
+                                "Möchten Sie trotzdem fortfahren?", vbQuestion + vbYesNo, "Outlook-Prüfung")
+        
+        If outlookResponse = vbNo Then
+            MsgBox "Bitte starten Sie Outlook und versuchen Sie es erneut.", vbInformation
+            GoTo Cleanup
+        End If
+    End If
+    
     '******************************************************************************
     ' ** 2. Excel-Datei auswählen (MODIFIKATIONSMÖGLICHKEIT: Weitere Dateitypen hinzufügen) **
     '******************************************************************************
@@ -109,7 +133,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Dim SpalteAnrede As String, SpalteTitel As String
             Dim SpalteVorname As String, SpalteNachname As String
             Dim SpalteTo As String, SpalteSubj As String, SpalteAttach As String
-            Dim SpalteUnternehmen As String  ' Neue Variable für die Unternehmen-Spalte
+            Dim SpalteUnternehmen As String
+            Dim SpalteSendezeitpunkt As String
             
             ' Anrede-Spalte finden
             Dim AnredeRange As Excel.Range
@@ -228,6 +253,14 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             If AnhangRange Is Nothing Then
                 SpalteAttach = InputBox("Spalte für Anhänge (z.B. G oder leer lassen, wenn nicht vorhanden):")
             End If
+
+            Dim SendezeitpunktRange As Excel.Range
+            Set SendezeitpunktRange = xlWS.Cells.Find("Sendezeitpunkt", LookIn:=xlValues, LookAt:=xlWhole)
+            If SendezeitpunktRange Is Nothing Then
+                SpalteSendezeitpunkt = InputBox("Spalte für Sendezeitpunkt (z.B. K oder leer lassen, wenn nicht vorhanden):")
+            Else
+                SpalteSendezeitpunkt = Chr(SendezeitpunktRange.Column + 64)
+            End If
             
             ' Benutzerbestätigung der Spalten
             Dim confirmColumns As VbMsgBoxResult
@@ -247,7 +280,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                       "CC:                     " & SpalteCC & vbCrLf & _
                       "BCC:                   " & SpalteBCC & vbCrLf & vbCrLf & _
                       "Betreff:              " & SpalteSubj & vbCrLf & _
-                      "Anhang:           " & SpalteAttach & vbCrLf & vbCrLf & _
+                      "Anhang:           " & SpalteAttach & vbCrLf & _
+                      "Sendezeitpunkt:   " & SpalteSendezeitpunkt & vbCrLf & vbCrLf & _
                       "Diese Spalten wurden zu den Kontaktinformationen gefunden. Sind Sie einverstanden?"
                 
                 confirmColumns = MsgBox(msg, vbQuestion + vbYesNoCancel, "Spaltenbestätigung")
@@ -270,7 +304,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                                      "7 - CC" & vbCrLf & _
                                      "8 - BCC" & vbCrLf & _
                                      "9 - Betreff" & vbCrLf & _
-                                     "10 - Anhang" & vbCrLf & vbCrLf
+                                     "10 - Anhang" & vbCrLf & _
+                                     "11 - Sendezeitpunkt" & vbCrLf & vbCrLf
 
                         Dim selectedColumn As String
                         selectedColumn = InputBox(Prompt:=columnList & vbCrLf & "Geben Sie die Nummer der Spalte ein:", _
@@ -356,6 +391,13 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                                             SpalteAttach = ""
                                         Else
                                             SpalteAttach = neueSpalte
+                                        End If
+                                    Case 11
+                                        neueSpalte = InputBox("Neue Spalte für Sendezeitpunkt:", "Sendezeitpunkt")
+                                        If neueSpalte = "" Then
+                                            SpalteSendezeitpunkt = ""
+                                        Else
+                                            SpalteSendezeitpunkt = neueSpalte
                                         End If
                                 End Select
                             Case Else
@@ -497,6 +539,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 Dim strTo As String, strSubj As String, strBody As String
                 Dim strAnrede As String, strVorname As String, strNachname As String
                 Dim strAttach As String, strCC As String, strBCC As String
+                Dim strUnternehmen As String
+                Dim strSendezeitpunkt As Variant
                 
                 ' Daten aus Excel lesen (mit Fehlertoleranz)
                 If SpalteTo <> "" Then
@@ -524,6 +568,11 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 Else
                     strNachname = ""
                 End If
+                If SpalteUnternehmen <> "" Then
+                    strUnternehmen = xlWS.Range(SpalteUnternehmen & i).Value
+                Else
+                    strUnternehmen = ""
+                End If
                 If SpalteAttach <> "" Then
                     strAttach = xlWS.Range(SpalteAttach & i).Value
                 Else
@@ -539,6 +588,12 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 Else
                     strBCC = ""
                 End If
+                If SpalteSendezeitpunkt <> "" Then
+                    strSendezeitpunkt = xlWS.Range(SpalteSendezeitpunkt & i).Value
+                Else
+                    strSendezeitpunkt = "" ' Oder vbEmpty
+                End If
+
                 
                 ' Anrede-Behandlung
                 If useCustomAnrede Then
@@ -590,6 +645,19 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                             End If
                         Next attFile
                     End If
+
+                    ' Sendezeitpunkt setzen
+                    If SpalteSendezeitpunkt <> "" And strSendezeitpunkt <> "" And IsDate(strSendezeitpunkt) Then ' Sicherstellen, dass strSendezeitpunkt nicht leer ist und ein Datum enthält
+                        If CDate(strSendezeitpunkt) > Now Then ' Prüfen, ob der Zeitpunkt in der Zukunft liegt
+                            .DeferredDeliveryTime = CDate(strSendezeitpunkt)
+                        Else
+                            ' Optional: Hinweis, wenn der Zeitpunkt in der Vergangenheit liegt
+                            MsgBox "Der Sendezeitpunkt für die E-Mail an " & strTo & " (Zeile " & i & ") liegt in der Vergangenheit und wurde nicht gesetzt." & vbCrLf & "Die E-Mail wird beim Klicken auf 'Senden' im angezeigten Fenster normal behandelt.", vbInformation
+                        End If
+                    ElseIf SpalteSendezeitpunkt <> "" And strSendezeitpunkt <> "" And Not IsDate(strSendezeitpunkt) Then
+                        ' Optional: Hinweis, wenn der Wert kein gültiges Datum ist
+                        MsgBox "Der Wert '" & strSendezeitpunkt & "' in der Spalte Sendezeitpunkt für die E-Mail an " & strTo & " (Zeile " & i & ") ist kein gültiges Datum und wird ignoriert.", vbInformation
+                    End If
                     
                     ' E-Mail senden oder anzeigen
                     If sendDirectly Then
@@ -630,8 +698,15 @@ Cleanup:
             Set fso = Nothing
             Set objMail = Nothing
             Set objOutlook = Nothing
-            xlWB.Close SaveChanges:=False
-            xlApp.Quit
+            
+            ' Prüfe ob Excel-Objekte existieren bevor sie geschlossen werden
+            If Not xlWB Is Nothing Then
+                xlWB.Close SaveChanges:=False
+            End If
+            If Not xlApp Is Nothing Then
+                xlApp.Quit
+            End If
+            
             Set xlWS = Nothing
             Set xlWB = Nothing
             Set xlApp = Nothing
