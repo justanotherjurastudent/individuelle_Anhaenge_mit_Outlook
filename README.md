@@ -17,7 +17,7 @@ Nun werden auch (un)geordnete Listen (ggf. mit mehreren Ebenen) sowie abweichend
 
 ### Update am 12.05.2025
 Wichtiges Update: Statt das Word-Dokument mit HTML-Tags zu versehen, wird das Dokument temporär als HTML-Dokument abgespeichert und dessen Inhalt wird in die E-Mail eingefügt. So sollten die allermeisten Formatierungen aus Word erhalten bleiben. 
-In einer zusätzlichen Spalte in Excel kann ein Sendezeitpunkt für jede Nachricht angegeben werden, wann die E-Mail versendet werden soll. Die Spalte sollte mit "Sendezeitpunkt" bezeichnet werden, um automatisch erkannt zu werden. Außerdem wird am Anfang der Code-Durchführung ein Check gemacht, ob Outlook im Hintergrund aktiv ist. Wenn nicht, dann sollte Outlook noch gestartet werden.
+In einer zusätzlichen Spalte in Excel kann ein Sendezeitpunkt für jede Nachricht angegeben werden, wann die E-Mail versendet werden soll. Der Sendezeitpunkt sollte als TT.MM.JJJJ HH:MM formatiert sein. Die Spalte sollte mit "Sendezeitpunkt" bezeichnet werden, um automatisch erkannt zu werden. Außerdem wird am Anfang der Code-Durchführung ein Check gemacht, ob Outlook im Hintergrund aktiv ist. Wenn nicht, dann sollte Outlook noch gestartet werden.
 
 Supporte meinen frei verfügbaren Content :)
 
