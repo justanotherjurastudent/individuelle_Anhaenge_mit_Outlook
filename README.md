@@ -15,6 +15,10 @@ Wichtiges Update: Die formelle Anrede wird nun korrekt gesetzt, wenn sich in der
 ### Update am 11.05.2025
 Nun werden auch (un)geordnete Listen (ggf. mit mehreren Ebenen) sowie abweichende Schriftfarben und Texthervorhebungsfarben in die E-Mail übernommen.
 
+### Update am 12.05.2025
+Wichtiges Update: Statt das Word-Dokument mit HTML-Tags zu versehen, wird das Dokument temporär als HTML-Dokument abgespeichert und dessen Inhalt wird in die E-Mail eingefügt. So sollten die allermeisten Formatierungen aus Word erhalten bleiben. 
+In einer zusätzlichen Spalte in Excel kann ein Sendezeitpunkt für jede Nachricht angegeben werden, wann die E-Mail versendet werden soll. Die Spalte sollte mit "Sendezeitpunkt" bezeichnet werden, um automatisch erkannt zu werden. Außerdem wird am Anfang der Code-Durchführung ein Check gemacht, ob Outlook im Hintergrund aktiv ist. Wenn nicht, dann sollte Outlook noch gestartet werden.
+
 Supporte meinen frei verfügbaren Content :)
 
 <a href="https://www.buymeacoffee.com/justanotherjurastudent" target="_blank">
