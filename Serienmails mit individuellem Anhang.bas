@@ -15,7 +15,73 @@
     Private Declare Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
 #End If
 
+Function CheckRequiredReferences() As Boolean
+    '******************************************************************************
+    ' ** Prüfung der notwendigen VBA-Verweise für Excel, Outlook und Office **
+    '******************************************************************************
+    Dim ref As Object
+    Dim hasExcel As Boolean, hasOutlook As Boolean, hasOffice As Boolean
+    Dim missingRefs As String
+    
+    hasExcel = False
+    hasOutlook = False
+    hasOffice = False
+    missingRefs = ""
+    
+    ' Durchlaufe alle Verweise im VBA-Projekt
+    For Each ref In Application.VBE.ActiveVBProject.References
+        If ref.IsOK Then
+            ' Prüfe auf Excel-Verweis
+            If InStr(ref.Name, "Excel") > 0 Then
+                hasExcel = True
+            End If
+            
+            ' Prüfe auf Outlook-Verweis
+            If InStr(ref.Name, "Outlook") > 0 Then
+                hasOutlook = True
+            End If
+            
+            ' Prüfe auf Office-Verweis
+            If InStr(ref.Name, "Office") > 0 Then
+                hasOffice = True
+            End If
+        End If
+    Next ref
+    
+    ' Sammle fehlende Verweise
+    If Not hasExcel Then
+        missingRefs = missingRefs & "- Microsoft Excel Object Library" & vbCrLf
+    End If
+    
+    If Not hasOutlook Then
+        missingRefs = missingRefs & "- Microsoft Outlook Object Library" & vbCrLf
+    End If
+    
+    If Not hasOffice Then
+        missingRefs = missingRefs & "- Microsoft Office Object Library" & vbCrLf
+    End If
+    
+    ' Zeige Fehlermeldung wenn Verweise fehlen
+    If missingRefs <> "" Then
+        MsgBox "Fehlende VBA-Verweise gefunden!" & vbCrLf & vbCrLf & _
+               "Die folgenden Verweise müssen im VBA-Editor unter 'Extras > Verweise' aktiviert werden:" & vbCrLf & vbCrLf & _
+               missingRefs & vbCrLf & _
+               "Bitte aktivieren Sie diese Verweise und starten Sie das Makro erneut.", _
+               vbCritical, "VBA-Verweise nicht verfügbar"
+        CheckRequiredReferences = False
+    Else
+        CheckRequiredReferences = True
+    End If
+End Function
+
 Sub SendEmailsFromWordWithExcelWithAbfrage()
+    '******************************************************************************
+    ' ** 0. Prüfung der VBA-Verweise **
+    '******************************************************************************
+    If Not CheckRequiredReferences() Then
+        Exit Sub
+    End If
+    
     '******************************************************************************
     ' ** 1. Variablen für die Verbindung zu Outlook, Word und Excel **
     '******************************************************************************
