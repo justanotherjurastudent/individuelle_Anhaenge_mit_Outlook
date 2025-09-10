@@ -7,7 +7,7 @@
 ' 4. **Anhang-Validierung**: Die Anhang-Prüfung kann erweitert werden, um Ordnerpfade oder Netzwerkpfade zu unterstützen.
 ' 5. **Vorlagenverwaltung**: Mehrere E-Mail-Vorlagen könnten über ein Auswahlmenü eingeführt werden.
 ' 6. **Automatisierung**: Die E-Mail-Versendung könnte über einen Timer oder Terminplaner gesteuert werden.
-' 7. **Dateianhänge**: Implementiert intelligente Aufteilung von Dateipfaden mit Kommas vor Dateierweiterungen.
+' 7. **Dateianhänge**: Implementiert intelligente Aufteilung von Dateipfaden mit verbesserter Komma-Behandlung für Dateinamen wie "Alexander, Schneider.xlsx".
 '******************************************************************************
 
 #If VBA7 Then
@@ -799,7 +799,10 @@ Sub TestSplitFilePathsSmart()
         "C:\My Document,.pdf", _
         "C:\file1.txt, C:\file2,.docx, D:\file3.pdf", _
         """C:\quoted file,.pdf"", D:\normal.txt", _
-        "C:\path\file,.pdf,D:\path2\file2.doc,E:\path3\file,.xlsx" _
+        "C:\path\file,.pdf,D:\path2\file2.doc,E:\path3\file,.xlsx", _
+        "C:\path\Alexander, Schneider.xlsx,D:\other.doc", _
+        "C:\Müller, Hans.pdf,D:\Schmidt, Anna.docx", _
+        "C:\test, file with comma.txt,D:\normal.pdf" _
     )
     
     For i = 0 To UBound(testCases)
@@ -819,7 +822,7 @@ End Sub
 Function SplitFilePathsSmart(filePaths As String) As String()
     '******************************************************************************
     ' ** Intelligente Aufteilung von Dateipfaden **
-    ' ** Kommas vor Dateierweiterungen werden nicht als Trennzeichen behandelt **
+    ' ** Unterscheidet zwischen Kommas in Dateinamen und Pfad-Trennzeichen **
     '******************************************************************************
     Dim result() As String
     Dim resultCount As Integer
@@ -850,7 +853,7 @@ Function SplitFilePathsSmart(filePaths As String) As String()
             inQuotes = Not inQuotes
             currentPath = currentPath & char
         ElseIf char = "," And Not inQuotes Then
-            ' Prüfe ob das Komma vor einer Dateierweiterung steht
+            ' Prüfe ob das Komma ein echter Pfad-Trennzeichen ist
             Dim restOfString As String
             restOfString = Mid(filePaths, i + 1)
             
@@ -858,17 +861,48 @@ Function SplitFilePathsSmart(filePaths As String) As String()
             Dim trimmedRest As String
             trimmedRest = LTrim(restOfString)
             
-            ' Prüfe ob das nächste Zeichen nach Leerzeichen ein Punkt ist (Dateierweiterung)
-            If Len(trimmedRest) > 0 And Left(trimmedRest, 1) = "." Then
-                ' Das Komma steht vor einer Dateierweiterung - behandle es als Teil des Pfades
-                currentPath = currentPath & char
-            Else
+            Dim isPathSeparator As Boolean
+            isPathSeparator = False
+            
+            If Len(trimmedRest) > 0 Then
+                ' Fall 1: Komma vor Dateierweiterung (z.B. "file,.pdf")
+                If Left(trimmedRest, 1) = "." Then
+                    isPathSeparator = False
+                ' Fall 2: Komma vor neuem Pfad mit Laufwerksbuchstabe (z.B. "C:\")
+                ElseIf Len(trimmedRest) >= 3 And Mid(trimmedRest, 2, 2) = ":\" Then
+                    isPathSeparator = True
+                ' Fall 3: Komma vor UNC-Pfad (z.B. "\\server\")
+                ElseIf Len(trimmedRest) >= 2 And Left(trimmedRest, 2) = "\\" Then
+                    isPathSeparator = True
+                ' Fall 4: Komma vor Anführungszeichen (neuer quoted Pfad)
+                ElseIf Left(trimmedRest, 1) = """" Then
+                    isPathSeparator = True
+                ' Fall 5: Komma vor absolutem Pfad (z.B. "\folder\")
+                ElseIf Left(trimmedRest, 1) = "\" Then
+                    isPathSeparator = True
+                Else
+                    ' Fallback: Prüfe ob der aktuelle Pfad bereits vollständig aussieht
+                    ' (hat eine Dateierweiterung am Ende)
+                    Dim currentTrimmed As String
+                    currentTrimmed = Trim(currentPath)
+                    If HasFileExtension(currentTrimmed) Then
+                        isPathSeparator = True
+                    Else
+                        isPathSeparator = False
+                    End If
+                End If
+            End If
+            
+            If isPathSeparator Then
                 ' Das Komma ist ein echter Trennzeichen
                 If Trim(currentPath) <> "" Then
                     result(resultCount) = Trim(currentPath)
                     resultCount = resultCount + 1
                 End If
                 currentPath = ""
+            Else
+                ' Das Komma ist Teil des Dateinamens
+                currentPath = currentPath & char
             End If
         Else
             currentPath = currentPath & char
@@ -885,6 +919,43 @@ Function SplitFilePathsSmart(filePaths As String) As String()
     ReDim Preserve result(IIf(resultCount = 0, 0, resultCount - 1))
     
     SplitFilePathsSmart = result
+End Function
+
+Function HasFileExtension(filePath As String) As Boolean
+    '******************************************************************************
+    ' ** Hilfsfunktion: Prüft ob ein Pfad eine Dateierweiterung hat **
+    '******************************************************************************
+    If Len(filePath) = 0 Then
+        HasFileExtension = False
+        Exit Function
+    End If
+    
+    ' Entferne Anführungszeichen falls vorhanden
+    Dim cleanPath As String
+    cleanPath = filePath
+    If Left(cleanPath, 1) = """" And Right(cleanPath, 1) = """" Then
+        cleanPath = Mid(cleanPath, 2, Len(cleanPath) - 2)
+    End If
+    
+    ' Suche nach dem letzten Punkt
+    Dim lastDotPos As Integer
+    Dim lastSlashPos As Integer
+    lastDotPos = InStrRev(cleanPath, ".")
+    lastSlashPos = InStrRev(cleanPath, "\")
+    
+    ' Ein Punkt muss vorhanden sein und nach dem letzten Backslash kommen
+    If lastDotPos > 0 And lastDotPos > lastSlashPos Then
+        ' Prüfe ob nach dem Punkt noch 1-4 Zeichen kommen (typische Erweiterung)
+        Dim extensionLength As Integer
+        extensionLength = Len(cleanPath) - lastDotPos
+        If extensionLength >= 1 And extensionLength <= 4 Then
+            HasFileExtension = True
+        Else
+            HasFileExtension = False
+        End If
+    Else
+        HasFileExtension = False
+    End If
 End Function
 
 Function ExportWordToHTML(doc As Document) As String
