@@ -7,6 +7,7 @@
 ' 4. **Anhang-Validierung**: Die Anhang-Prüfung kann erweitert werden, um Ordnerpfade oder Netzwerkpfade zu unterstützen.
 ' 5. **Vorlagenverwaltung**: Mehrere E-Mail-Vorlagen könnten über ein Auswahlmenü eingeführt werden.
 ' 6. **Automatisierung**: Die E-Mail-Versendung könnte über einen Timer oder Terminplaner gesteuert werden.
+' 7. **Dateianhänge**: Implementiert intelligente Aufteilung von Dateipfaden mit Kommas vor Dateierweiterungen.
 '******************************************************************************
 
 #If VBA7 Then
@@ -572,7 +573,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 Dim DateipfadCheck As String
                 DateipfadCheck = xlWS.Range(SpalteAttach & d).Value
                 Dim arrFileNames() As String
-                arrFileNames = Split(DateipfadCheck, ",")
+                arrFileNames = SplitFilePathsSmart(DateipfadCheck)
                 
                 For Each file In arrFileNames
                     file = Trim(file)
@@ -699,7 +700,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     ' Anhänge hinzufügen
                     If strAttach <> "" Then
                         Dim attachArray() As String
-                        attachArray = Split(strAttach, ",")
+                        attachArray = SplitFilePathsSmart(strAttach)
                         Dim attFile As Variant
                         For Each attFile In attachArray
                             attFile = Trim(attFile)
@@ -782,6 +783,109 @@ Cleanup:
         End If
     End With
 End Sub
+
+Sub TestSplitFilePathsSmart()
+    '******************************************************************************
+    ' ** Testfunktion für die intelligente Dateipfad-Aufteilung **
+    '******************************************************************************
+    Dim testCases As Variant
+    Dim results() As String
+    Dim i As Integer
+    
+    ' Testfälle definieren
+    testCases = Array( _
+        "C:\test.pdf,D:\other.doc", _
+        "C:\test,.pdf,D:\other.doc", _
+        "C:\My Document,.pdf", _
+        "C:\file1.txt, C:\file2,.docx, D:\file3.pdf", _
+        """C:\quoted file,.pdf"", D:\normal.txt", _
+        "C:\path\file,.pdf,D:\path2\file2.doc,E:\path3\file,.xlsx" _
+    )
+    
+    For i = 0 To UBound(testCases)
+        Debug.Print "Test " & (i + 1) & ": " & testCases(i)
+        results = SplitFilePathsSmart(testCases(i))
+        
+        Dim j As Integer
+        For j = 0 To UBound(results)
+            Debug.Print "  Pfad " & (j + 1) & ": " & results(j)
+        Next j
+        Debug.Print ""
+    Next i
+    
+    MsgBox "Testfunktion abgeschlossen. Ergebnisse siehe Direktfenster (Strg+G)."
+End Sub
+
+Function SplitFilePathsSmart(filePaths As String) As String()
+    '******************************************************************************
+    ' ** Intelligente Aufteilung von Dateipfaden **
+    ' ** Kommas vor Dateierweiterungen werden nicht als Trennzeichen behandelt **
+    '******************************************************************************
+    Dim result() As String
+    Dim resultCount As Integer
+    resultCount = 0
+    
+    If Trim(filePaths) = "" Then
+        ReDim result(0)
+        result(0) = ""
+        SplitFilePathsSmart = result
+        Exit Function
+    End If
+    
+    ' Erstelle ein vorläufiges Array mit ausreichend Platz
+    ReDim result(100)
+    
+    Dim i As Integer
+    Dim currentPath As String
+    Dim inQuotes As Boolean
+    Dim char As String
+    currentPath = ""
+    inQuotes = False
+    
+    ' Gehe durch jeden Charakter
+    For i = 1 To Len(filePaths)
+        char = Mid(filePaths, i, 1)
+        
+        If char = """" Then
+            inQuotes = Not inQuotes
+            currentPath = currentPath & char
+        ElseIf char = "," And Not inQuotes Then
+            ' Prüfe ob das Komma vor einer Dateierweiterung steht
+            Dim restOfString As String
+            restOfString = Mid(filePaths, i + 1)
+            
+            ' Entferne führende Leerzeichen für die Prüfung
+            Dim trimmedRest As String
+            trimmedRest = LTrim(restOfString)
+            
+            ' Prüfe ob das nächste Zeichen nach Leerzeichen ein Punkt ist (Dateierweiterung)
+            If Len(trimmedRest) > 0 And Left(trimmedRest, 1) = "." Then
+                ' Das Komma steht vor einer Dateierweiterung - behandle es als Teil des Pfades
+                currentPath = currentPath & char
+            Else
+                ' Das Komma ist ein echter Trennzeichen
+                If Trim(currentPath) <> "" Then
+                    result(resultCount) = Trim(currentPath)
+                    resultCount = resultCount + 1
+                End If
+                currentPath = ""
+            End If
+        Else
+            currentPath = currentPath & char
+        End If
+    Next i
+    
+    ' Füge den letzten Pfad hinzu, falls vorhanden
+    If Trim(currentPath) <> "" Then
+        result(resultCount) = Trim(currentPath)
+        resultCount = resultCount + 1
+    End If
+    
+    ' Redimensioniere das Array auf die tatsächliche Größe
+    ReDim Preserve result(IIf(resultCount = 0, 0, resultCount - 1))
+    
+    SplitFilePathsSmart = result
+End Function
 
 Function ExportWordToHTML(doc As Document) As String
     Dim tempPath As String
