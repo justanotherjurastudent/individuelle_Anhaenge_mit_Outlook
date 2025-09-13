@@ -1,7 +1,232 @@
 # Sende individuelle Anhänge an deine Empfänger mit Serienmails
 
-Mit diesen VBA-Codes kannst du mit Outlook, Excel und Word individuelle Dateianhänge an deine Empfänger per Serienmail senden.
-Für eine ausführliche Beschreibung, wie damit umzugehen ist, schaue dafür auf meinen Blog: [hier geht's zu meinen Blog mit der Anleitung](https://blogs.urz.uni-halle.de/simpletricks/2023/03/serien-e-mails-mit-individuellen-anhaengen/)
+Mit diesen VBA-Code kannst du mit Outlook, Excel und Word individuelle Dateianhänge an deine Empfänger per Serienmail senden.
+Kurzüberblick: Diese README erklärt laienverständlich, wie mit dem Word‑Makro „Serienmails mit individuellem Anhang“ E‑Mails über Outlook erstellt/versendet werden, Datensätze aus Excel gelesen, Platzhalter im Word‑Text ersetzt, individuelle Anhänge pro Zeile hinzugefügt und optional ein Sendezeitpunkt gesetzt wird. Sie führt durch alle Dialog‑Abfragen und markiert Pflicht‑/Optionalfelder.
+Neben dieser Anleitung gibt es noch meinen bebilderten Blogbeitrag: [hier geht's zu meinen Blog mit der Anleitung](https://blogs.urz.uni-halle.de/simpletricks/2023/03/serien-e-mails-mit-individuellen-anhaengen/)
+
+> [!IMPORTANT]
+> Diese Anleitung ist 1:1 an den vorliegenden VBA‑Code angepasst: Erforderlich sind die Spalten „E‑Mail“ und „Betreff“. Die Spalte „Anhang/Anhänge“ sollte als Spalte vorhanden sein (auch wenn einzelne Zellen leer bleiben), da der Code eine Validierungsschleife über diese Spalte ausführt.
+
+Supporte meinen frei verfügbaren Content :)
+
+<a href="https://www.buymeacoffee.com/justanotherjurastudent" target="_blank">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" >
+</a>
+
+***
+
+
+## Voraussetzungen
+
+- Windows mit Desktop‑Outlook, ‑Word und ‑Excel (Office 2016+ oder Microsoft 365).
+- Outlook ist bereits gestartet und mit einem sendefähigen Konto verbunden.
+- Makros sind erlaubt (Vertrauensstellungscenter) und die Office‑Bibliotheken sind referenziert.
+
+> [!NOTE]
+> In Word im VBA‑Editor unter „Extras → Verweise…“ die folgenden Verweise aktivieren:
+> - Microsoft Outlook xx.0 Object Library
+> - Microsoft Word xx.0 Object Library
+> - Microsoft Excel xx.0 Object Library
+> - Microsoft Office xx.0 Object Library
+
+***
+
+## Installation
+
+1. Word öffnen und die spätere E‑Mail‑Vorlage als neue Datei anlegen.
+2. VBA‑Editor mit Alt+F11 öffnen → „Datei → Datei importieren…“ → die .bas‑Datei „Serienmails mit individuellem Anhang.bas“ importieren.
+3. Unter „Extras → Verweise…“ die Bibliotheken (siehe oben) aktivieren.
+4. Word‑Vorlage als „.docm“ speichern, z. B. „Vorlage_Serienmail.docm“.
+
+> [!WARNING]
+> Makros nur aus vertrauenswürdigen Quellen ausführen. Falls Makros blockiert werden, Datei an einen vertrauenswürdigen Speicherort legen oder die Signatur vertrauen.
+
+***
+
+## Word‑Vorlage anlegen
+
+- Den kompletten E‑Mail‑Text in Word gestalten; Formatierungen, Listen, Links und Bilder werden als HTML in die E‑Mail übernommen.
+- Folgende Platzhalter werden unterstützt und automatisch ersetzt:
+  - `%Anrede%`, `%Titel%`, `%Vorname%`, `%Nachname%`, `%Unternehmen%`
+- Beispiel Kopf (optional):  
+  „%Anrede% %Titel% %Vorname% %Nachname%,“  
+  Danach der eigentliche Nachrichtentext.
+
+> [!TIP]
+> Für Serien mit vielen Einträgen zuerst einen Testlauf mit wenigen Zeilen im Modus „nur generieren“ durchführen; anschließend Inhalte prüfen.
+
+***
+
+## Excel‑Tabelle erstellen
+
+- Jede Zeile entspricht genau einer E‑Mail.
+- Der Code erkennt Spaltenköpfe automatisch und bietet eine interaktive Korrektur an.
+- Unterstützte/gesuchte Spalten (Kopfzeilen) und Status:
+
+| Spalte (Kopf)           | Zweck                                 | Pflicht?                          | Beispiel/Inhaltshinweise |
+|---|---|---|---|
+| E‑Mail                  | Empfängeradresse (.To)                | Ja                                | `alice@example.org` |
+| Betreff                 | Betreffzeile                          | Ja                                | „Ihre Unterlagen 2025“ |
+| Anhang / Anhänge        | Dateipfade pro Zeile                  | Spalte empfohlen, Zellen optional | `C:\A\1.pdf, C:\A\2.pdf` |
+| CC                      | Kopie‑Empfänger                       | Optional                          | `team@example.org; buchhaltung@example.org` |
+| BCC                     | Blindkopie                            | Optional                          | `leitung@example.org` |
+| Anrede                  | Anrede‑Quelle                         | Optional                          | „Herr“/„Frau“ (für formelle Logik) oder frei |
+| Titel                   | Titel vor dem Namen                   | Optional                          | „Dr.“ |
+| Vorname                 | Vorname                               | Optional                          | „Max“ |
+| Nachname                | Nachname                              | Optional                          | „Mustermann“ |
+| Unternehmen/Unternehmensname | Firmenname                      | Optional                          | „Beispiel GmbH“ |
+| Sendezeitpunkt          | Geplanter Versand                     | Optional                          | Gültiges Datum/Uhrzeit, siehe unten |
+
+> [!IMPORTANT]
+> - Mehrere Anhänge werden in EINER Zelle durch ein **Komma** getrennt, z. B.:  
+>   `C:\Rechnungen\RE-4711.pdf, C:\Rechnungen\AGB.pdf`  
+> - Der Dateipfadseparator in Windows ist weiterhin `\`. Das **Komma** trennt nur mehrere Pfade innerhalb derselben Zelle.  
+> - Der Code verarbeitet zuverlässig: in Anführungszeichen gesetzte Pfade, **Kommas im Dateinamen**, `file:///`‑URLs, UNC‑Pfade (`\\Server\Freigabe\...`) und **relative Pfade** relativ zum Speicherort der Excel‑Datei. Hyperlinks in Zellen werden berücksichtigt.
+
+> [!WARNING]
+> - Die Spalte „Anhang/Anhänge“ sollte als Spalte vorhanden sein (auch wenn einzelne Zellen leer sind). Ohne definierte Spalte kann die Anhang‑Validierung fehlschlagen.  
+> - Dateipfade müssen existieren und lesbar sein. Fehler werden gesammelt angezeigt und der Vorgang bricht zur Korrektur ab.
+
+***
+
+## Sendezeitpunkt korrekt formatieren
+
+- Spalte „Sendezeitpunkt“ ist optional. Ist der Zellenwert ein von Excel erkennbares Datum/Uhrzeit und liegt in der Zukunft, wird die E‑Mail mit Verzögerung (.DeferredDeliveryTime) geplant.
+- Empfohlene Formate:
+  - `YYYY-MM-DD HH:MM` (z. B. `2025-09-15 09:00`)
+  - `DD.MM.YYYY HH:MM` (z. B. `15.09.2025 14:30`)
+- Die Zellen sollten in Excel ausdrücklich als Datum/Uhrzeit formatiert sein. Leere Zellen bedeuten „keine Verzögerung“.
+
+> [!WARNING]
+> Liegt der Wert in der Vergangenheit oder ist er ungültig, wird die E‑Mail nicht verzögert. Es erscheint ein Hinweisdialog.
+
+***
+
+## Schritt‑für‑Schritt: Ablauf & Dialoge
+
+1) Outlook‑Check  
+- Beim Start prüft das Makro, ob Outlook läuft. Wenn nicht, erscheint ein Hinweis und der Ablauf wird beendet.
+
+2) Excel‑Datei wählen  
+- Ein Dateidialog öffnet sich („Excel‑Liste auswählen“). Die gewählte Arbeitsmappe wird im Hintergrund geöffnet.
+
+3) Arbeitsblatt auswählen  
+- Gibt es mehrere Blätter, wird eine nummerierte Liste angezeigt und nach der Blattnummer gefragt. Leere Eingabe beendet den Vorgang.
+
+4) Spalten finden & bestätigen  
+- Der Code sucht automatisch: „Anrede“, „Titel“, „Vorname“, „Nachname“, „Unternehmen/Unternehmensname“, „E‑Mail“, „Betreff“, „Anhang/Anhänge“, „CC“, „BCC“, „Sendezeitpunkt“.  
+- Danach zeigt er eine Übersicht der erkannten Spaltenbuchstaben und fragt: „Sind Sie einverstanden?“  
+  - „Ja“: weiter  
+  - „Nein“: gezielte Korrektur einzelner Spalten (Buchstaben eingeben)  
+  - „Abbrechen“: beendet  
+- Wichtig: „E‑Mail“ und „Betreff“ müssen gesetzt sein; fehlen sie, wird abgebrochen. „Anhang/Anhänge“ sollte als Spalte definiert sein (Zellen dürfen leer sein).
+
+5) Startzeile festlegen  
+- Abfrage: „Beginnen die Daten ab Zeile 2?“  
+  - „Ja“: Start bei Zeile 2  
+  - „Nein“: gewünschte Startzeile eingeben (Kopfzeile bleibt außerhalb)
+
+6) Anrede‑Variante wählen  
+- Abfrage: „Formelle Anrede übernehmen?“  
+  - „Ja“: Wenn in Excel „Frau“ → „Sehr geehrte Frau“, „Herr“ → „Sehr geehrter Herr“  
+  - „Nein“: Anrede wird aus Excel unverändert übernommen (auch freier Text möglich)
+
+7) Versandmodus wählen  
+- Abfrage: „E‑Mails direkt versenden?“  
+  - „Ja“: zusätzliche Sicherheitsbestätigung; E‑Mails werden automatisch gesendet  
+  - „Nein“: E‑Mails werden nur generiert und im Editor angezeigt (Entwürfe prüfen/senden)
+
+8) Anhang‑Validierung  
+- Der Code prüft für jede Zeile die Existenz der angegebenen Dateien. Fehlende Dateien werden zeilenweise gelistet.  
+- Bei Fehlern: Dialog mit Zusammenfassung; Ablauf wird beendet, damit die Pfade korrigiert werden können.
+
+9) E‑Mail‑Erstellung  
+- Für jede Zeile wird ein temporäres Word‑Dokument erstellt, die Platzhalter (%Anrede% etc.) ersetzt und der Inhalt als HTML in eine neue Outlook‑Mail kopiert.  
+- Dann werden Anhänge aus der Zelle hinzugefügt. `file:///`‑URLs werden in Pfade umgewandelt; Anführungszeichen an den Enden werden entfernt; relative Pfade werden relativ zum Workbook‑Ordner aufgelöst.  
+- Ist ein gültiger zukünftiger „Sendezeitpunkt“ gesetzt, wird die verzögerte Zustellung aktiviert; bei ungültigen Werten erscheint eine Warnung.
+
+10) Versand/Anzeige & Abschluss  
+- Je nach Modus werden Mails gesendet oder nur generiert (das Versenden liegt dann in Ihrer Hand).  
+- Am Ende erscheint eine Zusammenfassung (erfolgreich verarbeitet/Fehler) und die Objekte werden aufgeräumt.
+
+> [!TIP]
+> Für die erste Serie immer „Nur generieren“ wählen, Entwürfe prüfen (Empfänger, Betreff, Text, Anhänge, verzögerte Zustellung), dann erst den Direktversand verwenden.
+
+***
+
+## Beispiele
+
+### Beispiel‑Word (Kopf und Platzhalter)
+```
+%Anrede% %Titel% %Vorname% %Nachname%,
+
+anbei erhalten Sie die gewünschten Unterlagen für %Unternehmen%.
+
+Freundliche Grüße
+```
+
+### Beispiel‑Excel (kleine Tabelle)
+
+| E‑Mail             | Betreff                     | Anhang                                                     | CC                      | BCC               | Sendezeitpunkt  | Anrede | Titel | Vorname | Nachname | Unternehmen      |
+|---|---|---|---|---|---|---|---|---|---|---|
+| alice@beispiel.de  | Ihre Rechnung RE‑4711       | C:\Rechnungen\RE‑4711.pdf, C:\Rechnungen\AGB.pdf          | buchhaltung@beispiel.de |                   | 2025-09-15 09:00 | Frau   | Dr.   | Alice   | Beispiel  | Beispiel GmbH    |
+| bob@beispiel.de    | Einladung zum Webinar       | C:\Einladungen\Bob.pdf                                    |                         |                   |                 | Herr   |       | Bob     | Muster    | Muster AG        |
+| clara@beispiel.de  | Dokumente zur Vertragsänderung | \\server\share\Clara\Aenderung.pdf                       | team@beispiel.de        | chef@beispiel.de  | 15.09.2025 14:30 |        |       | Clara   | Meyer    | ACME SE          |
+
+> [!NOTE]
+> - Leer gelassene „Sendezeitpunkt“‑Zellen bedeuten Sofortversand (bzw. keine verzögerte Zustellung).  
+> - In „Anhang“ können Pfade in Anführungszeichen stehen. Kommas im Dateinamen sind erlaubt; die Aufteilung trennt zuverlässig zwischen Trennkomma und Komma im Namen.
+
+***
+
+## Häufige Fehler & Lösungen
+
+- „Outlook ist nicht geöffnet“  
+  → Outlook vor Start des Makros öffnen.
+
+- „Benutzerdefinierter Typ nicht definiert“  
+  → In Word unter „Extras → Verweise…“ die Office‑Bibliotheken aktivieren.
+
+- „Datei nicht gefunden“ in der Anhang‑Prüfung  
+  → Pfade korrigieren, Berechtigungen prüfen, Netzlaufwerke eingebunden, `file:///`‑URLs korrekt, relative Pfade relativ zum Excel‑Dateiordner verstehen.
+
+- Ungültiger „Sendezeitpunkt“  
+  → Zellenformat auf Datum/Uhrzeit setzen; lokal gültige Eingaben verwenden; nur zukünftige Zeitpunkte verzögern den Versand.
+
+- CC/BCC werden nicht gezogen  
+  → Mehrere Adressen per Semikolon `;` trennen; Spaltenkopf korrekt benennen und bei der Spaltenbestätigung prüfen.
+
+***
+
+## Best Practices
+
+- Zuerst Testlauf mit 3–5 Zeilen im Modus „nur generieren“.
+- Eindeutige Dateinamen.
+- Spaltenköpfe so benennen, dass die Auto‑Erkennung greift; ansonsten bei der Spaltenbestätigung sauber nachtragen.
+- Große Serien in Batches versenden und ggf. zwischen den Läufen kurze Pausen einlegen (organisatorische Limits/Spam‑Regeln beachten).
+
+***
+
+## Was ist Pflicht, was optional? (Kurzfassung)
+
+- Pflichtspalten:  
+  - `E‑Mail`  
+  - `Betreff`
+
+- Spalte empfohlen (Zellen optional):  
+  - `Anhang`/`Anhänge`  
+    - Pro Zeile können die Zellen leer sein; die Spalte sollte jedoch existieren, damit die Validierung korrekt läuft.
+
+- Weitere optionale Spalten:  
+  - `Anrede`, `Titel`, `Vorname`, `Nachname`, `Unternehmen/Unternehmensname`, `CC`, `BCC`, `Sendezeitpunkt`
+
+> [!IMPORTANT]
+> - Mehrere Anhänge in EINER Zelle per Komma trennen.  
+> - Windows‑Pfade nutzen den Backslash `\`. Das Komma ist ausschließlich der Trennzeichen zwischen mehreren Pfaden in einer Zelle.
+
+***
+
+## Changelog
 
 ### Update am 25.03.2025
 Der Code wurde stark angepasst, ist nun entschlackter und robuster. Zusätzlich wurden viele Kommentare an den Code geschrieben, um ihn verstehen zu können.
@@ -24,9 +249,4 @@ Wichtiges Update: Nun können auch Bilder in die E-Mail eingefügt werden. Mögl
 Außerdem können Dateinamen nun auch Kommas enthalten - davor war das Komma das unmissverständliche Trennzeichen zwischen zwei Dateipfaden.
 Zuletzt wurden die (Warn)Meldungen verbessert und Debug-Logs in dem Direktbereich im VBA-Editor hinzugefügt.
 
-Supporte meinen frei verfügbaren Content :)
-
-<a href="https://www.buymeacoffee.com/justanotherjurastudent" target="_blank">
-    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" >
-</a>
 
