@@ -60,14 +60,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
     End If
     
     If Not outlookRunning Then
-        Dim outlookResponse As VbMsgBoxResult
-        outlookResponse = MsgBox("Outlook scheint nicht geöffnet zu sein. Normalerweise muss Outlook geöffnet sein, um E-Mails zu versenden." & vbCrLf & _
-                                "Möchten Sie trotzdem fortfahren?", vbQuestion + vbYesNo, "Outlook-Prüfung")
-        
-        If outlookResponse = vbNo Then
-            MsgBox "Bitte starten Sie Outlook und versuchen Sie es erneut.", vbInformation
-            GoTo Cleanup
-        End If
+        MsgBox "Outlook ist nicht geöffnet. Bitte starten Sie Outlook und versuchen Sie es erneut.", vbExclamation, "Outlook erforderlich"
+        GoTo Cleanup
     End If
     
     '******************************************************************************
