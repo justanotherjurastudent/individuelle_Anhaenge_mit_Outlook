@@ -7,6 +7,7 @@
 ' 4. **Anhang-Validierung**: Die Anhang-Prüfung kann erweitert werden, um Ordnerpfade oder Netzwerkpfade zu unterstützen.
 ' 5. **Vorlagenverwaltung**: Mehrere E-Mail-Vorlagen könnten über ein Auswahlmenü eingeführt werden.
 ' 6. **Automatisierung**: Die E-Mail-Versendung könnte über einen Timer oder Terminplaner gesteuert werden.
+' 7. **Dateianhänge**: Implementiert intelligente Aufteilung von Dateipfaden mit verbesserter Komma-Behandlung für Dateinamen wie "Alexander, Schneider.xlsx".
 '******************************************************************************
 
 #If VBA7 Then
@@ -16,6 +17,14 @@
 #End If
 
 Sub SendEmailsFromWordWithExcelWithAbfrage()
+    
+    '******************************************************************************'
+    ' ** ZENTRALES DEBUG-PROTOKOLL **'
+    '******************************************************************************'
+    Debug.Print "=== E-MAIL-SERIENERSTELLUNG GESTARTET ==="
+    Debug.Print "Startzeit: " & Format(Now, "dd.mm.yyyy hh:nn:ss")
+    Debug.Print "Word-Version: " & Application.Version
+    
     '******************************************************************************
     ' ** 1. Variablen für die Verbindung zu Outlook, Word und Excel **
     '******************************************************************************
@@ -45,17 +54,14 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
     
     If colProcesses.Count > 0 Then
         outlookRunning = True
+        Debug.Print "Outlook-Status: Läuft"
+    Else
+        Debug.Print "Outlook-Status: Nicht gefunden"
     End If
     
     If Not outlookRunning Then
-        Dim outlookResponse As VbMsgBoxResult
-        outlookResponse = MsgBox("Outlook scheint nicht geöffnet zu sein. Normalerweise muss Outlook geöffnet sein, um E-Mails zu versenden." & vbCrLf & _
-                                "Möchten Sie trotzdem fortfahren?", vbQuestion + vbYesNo, "Outlook-Prüfung")
-        
-        If outlookResponse = vbNo Then
-            MsgBox "Bitte starten Sie Outlook und versuchen Sie es erneut.", vbInformation
-            GoTo Cleanup
-        End If
+        MsgBox "Outlook ist nicht geöffnet. Bitte starten Sie Outlook und versuchen Sie es erneut.", vbExclamation, "Outlook erforderlich"
+        GoTo Cleanup
     End If
     
     '******************************************************************************
@@ -73,6 +79,9 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
         If .Show = -1 Then
             Pfad = .SelectedItems(1)
             Set xlWB = xlApp.Workbooks.Open(Pfad)
+            Debug.Print "Excel-Datei: " & Pfad
+            Debug.Print "Excel-Version: " & xlApp.Version
+            Debug.Print "Arbeitsblätter verfügbar: " & xlWB.Worksheets.Count
             
             '******************************************************************************
             ' ** 3. Arbeitsblatt auswählen (MODIFIKATIONSMÖGLICHKEIT: Name-Eingabe statt Nummer) **
@@ -124,6 +133,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             ' ** 4. Spaltenfindung (MODIFIKATIONSMÖGLICHKEIT: Suchbegriffe erweitern) **
             '******************************************************************************
             Set xlWS = xlWB.Worksheets(selectedSheet)
+            Debug.Print "Ausgewähltes Arbeitsblatt: " & xlWS.Name & " (Nummer " & selectedSheet & ")"
             
             ' Restliche Initialisierung
             Set doc = ActiveDocument
@@ -462,38 +472,16 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 End If
             End If
             
+            ' Debug: Parameter-Zusammenfassung
+            Debug.Print "Parameter:"
+            Debug.Print "  - Anrede: " & IIf(useCustomAnrede, "Formell (Sehr geehrter Herr/Frau)", "Aus Excel übernehmen")
+            Debug.Print "  - Versand: " & IIf(sendDirectly, "Direkt versenden", "Nur generieren")
+            
             '******************************************************************************
-            ' ** 8. HTML-Formatierung (MODIFIKATIONSMÖGLICHKEIT: CSS-Stile hinzufügen) **
-            '*****************************************************************************' Temporäre HTML-Datei erstellen
-            Dim htmlContent As String
-            htmlContent = ExportWordToHTML(ActiveDocument)
-
-            ' Standard-Schriftart und -größe aus dem Dokument ermitteln
-            Dim fontName As String
-            Dim fontSize As Single
-            fontName = ActiveDocument.Styles(wdStyleNormal).Font.Name
-            fontSize = ActiveDocument.Styles(wdStyleNormal).Font.Size
-
-            ' CSS-Styles einbetten
-            Dim htmlTemplate As String
-            Dim bodyContent As String
-            Dim splitContent As Variant
-            
-            splitContent = Split(htmlContent, "<body>")
-            If UBound(splitContent) >= 1 Then
-                bodyContent = Split(splitContent(1), "</body>")(0)
-            Else
-                bodyContent = htmlContent ' Fallback: Verwende gesamten Content
-            End If
-            
-            htmlTemplate = "<html>" & _
-                        "<head>" & _
-                        "<meta charset=""UTF-8"">" & _
-                        "<style type=""text/css"">" & _
-                        "body { font-family: " & fontName & "; font-size: " & fontSize & "pt; }" & _
-                        "</style>" & _
-                        "</head>" & _
-                        "<body>" & bodyContent & "</body></html>"
+            ' ** 8. Word-Inhalt vorbereiten für E-Mail-Body **
+            '******************************************************************************
+            ' Erstelle Kopie des Dokuments für Bearbeitung
+            objUndo.StartCustomRecord "E-Mail Erstellung"
 
             '******************************************************************************
             ' ** 9. Anhang-Validierung (MODIFIKATIONSMÖGLICHKEIT: erweiterter Umgang mit Netzwerkpfaden) **
@@ -501,29 +489,71 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Dim fehlerListe As String
             Dim lastRow As Long
             lastRow = xlWS.Cells(xlWS.Rows.Count, 1).End(xlUp).Row
+            Debug.Print "Zu verarbeitende Zeilen: " & (lastRow - startRow + 1) & " (Zeilen " & startRow & " bis " & lastRow & ")"
             
             For d = startRow To lastRow
                 Dim DateipfadCheck As String
-                DateipfadCheck = xlWS.Range(SpalteAttach & d).Value
+                ' Berücksichtige Hyperlinks in Excel-Zellen
+                DateipfadCheck = GetCellFilePathsWithHyperlinks(xlWS, SpalteAttach & d)
                 Dim arrFileNames() As String
-                arrFileNames = Split(DateipfadCheck, ",")
+                arrFileNames = SplitFilePathsSmart(DateipfadCheck)
                 
                 For Each file In arrFileNames
-                    file = Trim(file)
-                    ' Entferne führende und abschließende Anführungszeichen, falls vorhanden
-                    If Left(file, 1) = """" Then file = Mid(file, 2)
-                    If Right(file, 1) = """" Then file = Left(file, Len(file) - 1)
+                    Dim cleanFile As String
+                    cleanFile = Trim(file)
                     
-                    If file <> "" Then
-                        If Not fso.FileExists(file) Then
-                            fehlerListe = fehlerListe & "Fehler: " & file & " existiert nicht (Zeile " & d & ")" & vbCrLf
+                    ' Debug: Originaler Eintrag aus Excel
+                    ' Debug.Print "Original aus Excel (Zeile " & d & "): '" & cleanFile & "'"
+                    
+                    ' Konvertiere file:/// URLs zu normalen Pfaden
+                    cleanFile = ConvertFileUrlToPath(cleanFile)
+                    
+                    ' Debug: Nach URL-Konvertierung
+                    ' Debug.Print "Nach URL-Konvertierung: '" & cleanFile & "'"
+                    
+                    ' Entferne führende und abschließende Anführungszeichen, falls vorhanden
+                    If Left(cleanFile, 1) = """" Then cleanFile = Mid(cleanFile, 2)
+                    If Right(cleanFile, 1) = """" Then cleanFile = Left(cleanFile, Len(cleanFile) - 1)
+                    
+                    ' Debug: Nach Anführungszeichen-Entfernung
+                    ' Debug.Print "Nach Anführungszeichen-Entfernung: '" & cleanFile & "'"
+                    
+                    If cleanFile <> "" Then
+                        ' Debug: Dateiexistenz-Prüfung
+                        Dim fileExists As Boolean
+                        fileExists = fso.FileExists(cleanFile)
+                        ' Debug.Print "Datei existiert: " & fileExists & " für '" & cleanFile & "'"
+                        
+                        If Not fileExists Then
+                            fehlerListe = fehlerListe & "Fehler: " & cleanFile & " existiert nicht (Zeile " & d & ")" & vbCrLf
                         End If
                     End If
                 Next
             Next
             
             If fehlerListe <> "" Then
-                MsgBox "Fehler in Anhängen gefunden:" & vbCrLf & fehlerListe
+                Debug.Print "FEHLER in Anhang-Validierung:"
+                Debug.Print fehlerListe
+
+                ' Zähle die Anzahl der fehlerhaften Einträge
+                Dim errorLines() As String
+                errorLines = Split(fehlerListe, vbCrLf)
+                Dim errorCount As Integer
+                errorCount = 0
+                Dim line As Variant
+                For Each line In errorLines
+                    If Trim(line) <> "" And Left(Trim(line), 6) = "Fehler" Then
+                        errorCount = errorCount + 1
+                    End If
+                Next
+
+                ' Vorgang abbrechen und User anweisen, Pfade zu korrigieren
+                MsgBox "ACHTUNG: " & errorCount & " Datei(en) konnten nicht gefunden werden!" & vbCrLf & vbCrLf & _
+                       "Folgende Dateien sind betroffen:" & vbCrLf & vbCrLf & _
+                       fehlerListe & vbCrLf & vbCrLf & _
+                       "Bitte korrigieren Sie die Dateipfade in der Excel-Tabelle oder entfernen Sie die fehlerhaften Einträge und starten Sie den Vorgang erneut.", _
+                       vbExclamation, "Dateipfad-Fehler"
+                
                 ActiveDocument.Undo
                 GoTo Cleanup
             End If
@@ -536,6 +566,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             sentCount = 0
             
             For i = startRow To lastRow
+                Debug.Print "Verarbeite Zeile " & i & " von " & lastRow & "..."
                 Dim strTo As String, strSubj As String, strBody As String
                 Dim strAnrede As String, strVorname As String, strNachname As String
                 Dim strAttach As String, strCC As String, strBCC As String
@@ -574,7 +605,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     strUnternehmen = ""
                 End If
                 If SpalteAttach <> "" Then
-                    strAttach = xlWS.Range(SpalteAttach & i).Value
+                    ' Berücksichtige Hyperlinks in Excel-Zellen
+                    strAttach = GetCellFilePathsWithHyperlinks(xlWS, SpalteAttach & i)
                 Else
                     strAttach = ""
                 End If
@@ -607,19 +639,29 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     ' strAnrede bleibt wie gelesen.
                 End If
                 
-                strBody = htmlTemplate
-
-                ' Ersetze Platzhalter
-                If SpalteAnrede <> "" Then strBody = Replace(strBody, "%Anrede%", strAnrede)
-                If SpalteTitel <> "" Then strBody = Replace(strBody, "%Titel%", xlWS.Range(SpalteTitel & i).Value)
-                If SpalteVorname <> "" Then strBody = Replace(strBody, "%Vorname%", strVorname)
-                If SpalteNachname <> "" Then strBody = Replace(strBody, "%Nachname%", strNachname)
-                If SpalteUnternehmen <> "" Then strBody = Replace(strBody, "%Unternehmen%", xlWS.Range(SpalteUnternehmen & i).Value)
+                ' Temporäre Kopie des Dokuments erstellen und Platzhalter ersetzen
+                Dim tempDoc As Document
+                Set tempDoc = Nothing ' Initialisierung für Error-Handling
+                
+                On Error GoTo ErrorHandler
+                Application.ScreenUpdating = False ' Bildschirmaktualisierung ausschalten
+                Set tempDoc = Documents.Add(Visible:=False) ' Unsichtbares Dokument erstellen
+                tempDoc.Range.FormattedText = doc.Range.FormattedText
+                
+                ' Ersetze Platzhalter im temporären Dokument
+                With tempDoc.Range.Find
+                    .ClearFormatting
+                    .Replacement.ClearFormatting
+                    .Execute FindText:="%Anrede%", ReplaceWith:=strAnrede, Replace:=wdReplaceAll
+                    If SpalteTitel <> "" Then .Execute FindText:="%Titel%", ReplaceWith:=xlWS.Range(SpalteTitel & i).Value, Replace:=wdReplaceAll
+                    If SpalteVorname <> "" Then .Execute FindText:="%Vorname%", ReplaceWith:=strVorname, Replace:=wdReplaceAll
+                    If SpalteNachname <> "" Then .Execute FindText:="%Nachname%", ReplaceWith:=strNachname, Replace:=wdReplaceAll
+                    If SpalteUnternehmen <> "" Then .Execute FindText:="%Unternehmen%", ReplaceWith:=xlWS.Range(SpalteUnternehmen & i).Value, Replace:=wdReplaceAll
+                End With
                 
                 '******************************************************************************
                 ' ** 11. E-Mail-Versand (MODIFIKATIONSMÖGLICHKEIT: Vorgang pausieren) **
                 '******************************************************************************
-                On Error Resume Next
                 Set objMail = objOutlook.CreateItem(0)  ' Erstelle neue Mail-Instanz für jeden Durchlauf
                 
                 With objMail
@@ -627,21 +669,27 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     .CC = strCC
                     .BCC = strBCC
                     .Subject = strSubj
-                    .HTMLBody = strBody     ' Hier strBody statt htmlTemplate verwenden
-                    .BodyFormat = 2
+                    .BodyFormat = 2 ' HTML-Format
+                    
+                    ' Word-Inhalt direkt in E-Mail kopieren (behält Bilder bei)
+                    tempDoc.Range.Copy
+                    .GetInspector.WordEditor.Range.Paste
                     
                     ' Anhänge hinzufügen
                     If strAttach <> "" Then
                         Dim attachArray() As String
-                        attachArray = Split(strAttach, ",")
+                        attachArray = SplitFilePathsSmart(strAttach)
                         Dim attFile As Variant
                         For Each attFile In attachArray
-                            attFile = Trim(attFile)
+                            Dim cleanAttFile As String
+                            cleanAttFile = Trim(attFile)
+                            ' Konvertiere file:/// URLs zu normalen Pfaden
+                            cleanAttFile = ConvertFileUrlToPath(cleanAttFile)
                             ' Entferne führende und abschließende Anführungszeichen, falls vorhanden
-                            If Left(attFile, 1) = """" Then attFile = Mid(attFile, 2)
-                            If Right(attFile, 1) = """" Then attFile = Left(attFile, Len(attFile) - 1)
-                            If attFile <> "" Then
-                                .Attachments.Add attFile
+                            If Left(cleanAttFile, 1) = """" Then cleanAttFile = Mid(cleanAttFile, 2)
+                            If Right(cleanAttFile, 1) = """" Then cleanAttFile = Left(cleanAttFile, Len(cleanAttFile) - 1)
+                            If cleanAttFile <> "" Then
+                                .Attachments.Add cleanAttFile
                             End If
                         Next attFile
                     End If
@@ -652,11 +700,20 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                             .DeferredDeliveryTime = CDate(strSendezeitpunkt)
                         Else
                             ' Optional: Hinweis, wenn der Zeitpunkt in der Vergangenheit liegt
-                            MsgBox "Der Sendezeitpunkt für die E-Mail an " & strTo & " (Zeile " & i & ") liegt in der Vergangenheit und wurde nicht gesetzt." & vbCrLf & "Die E-Mail wird beim Klicken auf 'Senden' im angezeigten Fenster normal behandelt.", vbInformation
+                            MsgBox "HINWEIS: Sendezeitpunkt in der Vergangenheit" & vbCrLf & vbCrLf & _
+                                   "Die E-Mail an " & strTo & " (Zeile " & i & ") hat einen Sendezeitpunkt in der Vergangenheit." & vbCrLf & _
+                                   "Der verzögerte Versand wurde daher nicht aktiviert." & vbCrLf & vbCrLf & _
+                                   "Die E-Mail wird beim Klick auf 'Senden' sofort versendet.", _
+                                   vbInformation, "Sendezeitpunkt-Hinweis"
                         End If
                     ElseIf SpalteSendezeitpunkt <> "" And strSendezeitpunkt <> "" And Not IsDate(strSendezeitpunkt) Then
                         ' Optional: Hinweis, wenn der Wert kein gültiges Datum ist
-                        MsgBox "Der Wert '" & strSendezeitpunkt & "' in der Spalte Sendezeitpunkt für die E-Mail an " & strTo & " (Zeile " & i & ") ist kein gültiges Datum und wird ignoriert.", vbInformation
+                        MsgBox "WARNUNG: Ungültiger Sendezeitpunkt" & vbCrLf & vbCrLf & _
+                               "Der Wert '" & strSendezeitpunkt & "' in der Sendezeitpunkt-Spalte (Zeile " & i & ")" & vbCrLf & _
+                               "für die E-Mail an " & strTo & " ist kein gültiges Datum." & vbCrLf & vbCrLf & _
+                               "Der verzögerte Versand wird für diese E-Mail nicht aktiviert." & vbCrLf & _
+                               "Die E-Mail wird beim Klick auf 'Senden' sofort versendet.", _
+                               vbExclamation, "Ungültiger Sendezeitpunkt"
                     End If
                     
                     ' E-Mail senden oder anzeigen
@@ -667,14 +724,42 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     End If
                 End With
                 
-                If Err.Number <> 0 Then
-                    fehlerMeldung = fehlerMeldung & vbCrLf & "Fehler bei " & strVorname & " " & strNachname & ": " & Err.Description
-                Else
-                    sentCount = sentCount + 1
+                ' Erfolgreich: Temporäres Dokument sicher schließen
+                On Error Resume Next
+                If Not tempDoc Is Nothing Then
+                    tempDoc.Close SaveChanges:=False
+                    Set tempDoc = Nothing
                 End If
+                Application.ScreenUpdating = True ' Bildschirmaktualisierung wieder einschalten
+                On Error GoTo 0
                 
+                sentCount = sentCount + 1
                 Set objMail = Nothing
+                GoTo NextIteration
+                
+ErrorHandler:
+                ' Fehlerbehandlung: Temporäres Dokument sicher schließen
+                Application.ScreenUpdating = True ' Bildschirmaktualisierung wieder einschalten
+                On Error Resume Next
+                If Not tempDoc Is Nothing Then
+                    tempDoc.Close SaveChanges:=False
+                    Set tempDoc = Nothing
+                    Debug.Print "Temporäres Dokument nach Fehler geschlossen (Zeile " & i & ")"
+                End If
+                Set objMail = Nothing
+                On Error GoTo 0
+                
+                fehlerMeldung = fehlerMeldung & vbCrLf & "Fehler bei " & strVorname & " " & strNachname & " (Zeile " & i & "): " & Err.Description
+                If strAttach <> "" Then
+                    fehlerMeldung = fehlerMeldung & vbCrLf & "  Betroffene Datei(en): " & strAttach
+                End If
+                Debug.Print "FEHLER bei Zeile " & i & " (" & strVorname & " " & strNachname & "): " & Err.Description
+                If strAttach <> "" Then
+                    Debug.Print "  Betroffene Datei(en): " & strAttach
+                End If
                 Err.Clear
+                
+NextIteration:
             Next
             
             '******************************************************************************
@@ -689,9 +774,21 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             On Error GoTo 0
 
             If fehlerMeldung <> "" Then
-                MsgBox "Fehler aufgetreten:" & vbCrLf & fehlerMeldung
+                Debug.Print "FEHLER bei der Verarbeitung:"
+                Debug.Print fehlerMeldung
+                MsgBox "ACHTUNG: Fehler bei der E-Mail-Verarbeitung!" & vbCrLf & vbCrLf & _
+                       "Folgende Probleme sind aufgetreten:" & vbCrLf & vbCrLf & _
+                       fehlerMeldung & vbCrLf & vbCrLf & _
+                       "Die fehlerhaften E-Mails wurden übersprungen. " & sentCount & " E-Mails wurden erfolgreich verarbeitet.", _
+                       vbExclamation, "Verarbeitungsfehler"
             Else
-                MsgBox "Erfolgreich: " & sentCount & " E-Mails " & IIf(sendDirectly, "gesendet", "generiert")
+                Debug.Print "=== VERARBEITUNG ABGESCHLOSSEN ==="
+                Debug.Print "Erfolgreich verarbeitet: " & sentCount & " E-Mails"
+                Debug.Print "Versandmodus: " & IIf(sendDirectly, "Direkt versendet", "Nur generiert")
+                Debug.Print "Endzeit: " & Format(Now, "dd.mm.yyyy hh:nn:ss")
+                MsgBox "ERFOLG: E-Mail-Serienversand abgeschlossen!" & vbCrLf & vbCrLf & _
+                       sentCount & " E-Mails wurden erfolgreich " & IIf(sendDirectly, "versendet", "generiert") & ".", _
+                       vbInformation, "Vorgang erfolgreich abgeschlossen"
             End If
             
 Cleanup:
@@ -717,45 +814,320 @@ Cleanup:
     End With
 End Sub
 
-Function ExportWordToHTML(doc As Document) As String
-    Dim tempPath As String
-    tempPath = Environ$("TEMP") & "\" & "temp_email_" & Format(Now, "yyyymmddhhmmss") & ".html"
+
+Function SplitFilePathsSmart(filePaths As String) As String()
+    '******************************************************************************
+    ' ** Intelligente Aufteilung von Dateipfaden **
+    ' ** Unterscheidet zwischen Kommas in Dateinamen und Pfad-Trennzeichen **
+    '******************************************************************************
+    Dim result() As String
+    Dim resultCount As Integer
+    resultCount = 0
     
-    ' Erstelle ein neues temporäres Dokument und kopiere den Inhalt
-    Dim tempDoc As Document
-    Set tempDoc = Documents.Add
-    tempDoc.Range.FormattedText = doc.Range.FormattedText
+    If Trim(filePaths) = "" Then
+        ReDim result(0)
+        result(0) = ""
+        SplitFilePathsSmart = result
+        Exit Function
+    End If
     
-    ' Speichere das temporäre Dokument als HTML
-    tempDoc.SaveAs2 FileName:=tempPath, FileFormat:=wdFormatFilteredHTML
+    ' Erstelle ein vorläufiges Array mit ausreichend Platz
+    ReDim result(100)
     
-    ' Lies den HTML-Inhalt
-    Dim fileNum As Integer
-    fileNum = FreeFile
-    Open tempPath For Input As #fileNum
-    ExportWordToHTML = Input$(LOF(fileNum), #fileNum)
-    Close #fileNum
+    Dim i As Integer
+    Dim currentPath As String
+    Dim inQuotes As Boolean
+    Dim char As String
+    currentPath = ""
+    inQuotes = False
     
-    ' Schließe das temporäre Dokument ohne zu speichern
-    tempDoc.Close SaveChanges:=False
+    ' Gehe durch jeden Charakter
+    For i = 1 To Len(filePaths)
+        char = Mid(filePaths, i, 1)
+        
+        If char = """" Then
+            inQuotes = Not inQuotes
+            currentPath = currentPath & char
+        ElseIf char = "," And Not inQuotes Then
+            ' Prüfe ob das Komma ein echter Pfad-Trennzeichen ist
+            Dim restOfString As String
+            restOfString = Mid(filePaths, i + 1)
+            
+            ' Entferne führende Leerzeichen für die Prüfung
+            Dim trimmedRest As String
+            trimmedRest = LTrim(restOfString)
+            
+            Dim isPathSeparator As Boolean
+            isPathSeparator = False
+            
+            If Len(trimmedRest) > 0 Then
+                ' Fall 1: Komma vor Dateierweiterung (z.B. "file,.pdf")
+                If Left(trimmedRest, 1) = "." Then
+                    isPathSeparator = False
+                ' Fall 2: Komma vor neuem Pfad mit Laufwerksbuchstabe (z.B. "C:\")
+                ElseIf Len(trimmedRest) >= 3 And Mid(trimmedRest, 2, 2) = ":\" Then
+                    isPathSeparator = True
+                ' Fall 3: Komma vor UNC-Pfad (z.B. "\\server\")
+                ElseIf Len(trimmedRest) >= 2 And Left(trimmedRest, 2) = "\\" Then
+                    isPathSeparator = True
+                ' Fall 4: Komma vor Anführungszeichen (neuer quoted Pfad)
+                ElseIf Left(trimmedRest, 1) = """" Then
+                    isPathSeparator = True
+                ' Fall 5: Komma vor absolutem Pfad (z.B. "\folder\")
+                ElseIf Left(trimmedRest, 1) = "\" Then
+                    isPathSeparator = True
+                Else
+                    ' Fallback: Prüfe ob der aktuelle Pfad bereits vollständig aussieht
+                    ' (hat eine Dateierweiterung am Ende)
+                    Dim currentTrimmed As String
+                    currentTrimmed = Trim(currentPath)
+                    If HasFileExtension(currentTrimmed) Then
+                        isPathSeparator = True
+                    Else
+                        isPathSeparator = False
+                    End If
+                End If
+            End If
+            
+            If isPathSeparator Then
+                ' Das Komma ist ein echter Trennzeichen
+                If Trim(currentPath) <> "" Then
+                    result(resultCount) = Trim(currentPath)
+                    resultCount = resultCount + 1
+                End If
+                currentPath = ""
+            Else
+                ' Das Komma ist Teil des Dateinamens
+                currentPath = currentPath & char
+            End If
+        Else
+            currentPath = currentPath & char
+        End If
+    Next i
     
-    ' Sicheres Löschen mit FileSystemObject
+    ' Füge den letzten Pfad hinzu, falls vorhanden
+    If Trim(currentPath) <> "" Then
+        result(resultCount) = Trim(currentPath)
+        resultCount = resultCount + 1
+    End If
+    
+    ' Redimensioniere das Array auf die tatsächliche Größe
+    ReDim Preserve result(IIf(resultCount = 0, 0, resultCount - 1))
+    
+    SplitFilePathsSmart = result
+End Function
+
+Function HasFileExtension(filePath As String) As Boolean
+    '******************************************************************************
+    ' ** Hilfsfunktion: Prüft ob ein Pfad eine Dateierweiterung hat **
+    '******************************************************************************
+    If Len(filePath) = 0 Then
+        HasFileExtension = False
+        Exit Function
+    End If
+    
+    ' Entferne Anführungszeichen falls vorhanden
+    Dim cleanPath As String
+    cleanPath = filePath
+    If Left(cleanPath, 1) = """" And Right(cleanPath, 1) = """" Then
+        cleanPath = Mid(cleanPath, 2, Len(cleanPath) - 2)
+    End If
+    
+    ' Suche nach dem letzten Punkt
+    Dim lastDotPos As Integer
+    Dim lastSlashPos As Integer
+    lastDotPos = InStrRev(cleanPath, ".")
+    lastSlashPos = InStrRev(cleanPath, "\")
+    
+    ' Ein Punkt muss vorhanden sein und nach dem letzten Backslash kommen
+    If lastDotPos > 0 And lastDotPos > lastSlashPos Then
+        ' Prüfe ob nach dem Punkt noch 1-4 Zeichen kommen (typische Erweiterung)
+        Dim extensionLength As Integer
+        extensionLength = Len(cleanPath) - lastDotPos
+        If extensionLength >= 1 And extensionLength <= 4 Then
+            HasFileExtension = True
+        Else
+            HasFileExtension = False
+        End If
+    Else
+        HasFileExtension = False
+    End If
+End Function
+
+Function GetCellFilePathsWithHyperlinks(ws As Excel.Worksheet, cellAddress As String) As String
+    '******************************************************************************
+    ' ** Holt Dateipfade aus Excel-Zelle und berücksichtigt Hyperlinks **
+    '******************************************************************************
+    Dim result As String
+    Dim targetRange As Excel.Range
+    Set targetRange = ws.Range(cellAddress)
+    
+    ' Prüfe ob die Zelle Hyperlinks enthält
+    If targetRange.Hyperlinks.Count > 0 Then
+        Dim hyperlink As Excel.Hyperlink
+        Set hyperlink = targetRange.Hyperlinks(1)
+        
+        ' Debug: Nur bei Fehlern oder wichtigen Änderungen
+        If hyperlink.Address <> hyperlink.TextToDisplay Then
+            Debug.Print "Hyperlink in " & cellAddress & ": '" & hyperlink.Address & "'"
+        End If
+        
+        ' Versuche verschiedene Quellen für den Dateipfad
+        If hyperlink.Address <> "" And hyperlink.Address <> hyperlink.TextToDisplay Then
+            ' Verwende Address, wenn es sich vom angezeigten Text unterscheidet
+            result = hyperlink.Address
+        ElseIf hyperlink.SubAddress <> "" Then
+            ' Verwende SubAddress, falls Address leer ist
+            result = hyperlink.SubAddress
+        ElseIf InStr(targetRange.Formula, "file:") > 0 Then
+            ' Versuche URL aus der Zellformel zu extrahieren
+            result = ExtractFileUrlFromFormula(targetRange.Formula)
+        Else
+            ' Fallback: Verwende angezeigten Text
+            result = hyperlink.TextToDisplay
+        End If
+        
+        ' Wandle relative Pfade in absolute Pfade um
+        result = ConvertRelativeToAbsolutePath(result, ws.Parent.Path)
+        
+    Else
+        ' Kein Hyperlink - prüfe trotzdem die Formel
+        If InStr(targetRange.Formula, "file:") > 0 Then
+            result = ExtractFileUrlFromFormula(targetRange.Formula)
+        Else
+            ' Verwende normalen Zellwert
+            result = targetRange.Value
+        End If
+        
+        ' Wandle auch hier relative Pfade um
+        result = ConvertRelativeToAbsolutePath(result, ws.Parent.Path)
+    End If
+    
+    GetCellFilePathsWithHyperlinks = result
+End Function
+
+Function ConvertRelativeToAbsolutePath(filePath As String, basePath As String) As String
+    '******************************************************************************
+    ' ** Wandelt relative Pfade in absolute Pfade um **
+    '******************************************************************************
+    Dim result As String
+    result = Trim(filePath)
+    
+    ' Wenn schon absoluter Pfad oder file:/// URL, keine Änderung nötig
+    If Len(result) >= 3 And Mid(result, 2, 2) = ":\" Then
+        ' Schon absoluter Pfad (z.B. C:\...)
+        ConvertRelativeToAbsolutePath = result
+        Exit Function
+    ElseIf LCase(Left(result, 4)) = "file" Then
+        ' Schon file:/// URL
+        ConvertRelativeToAbsolutePath = result
+        Exit Function
+    ElseIf Left(result, 2) = "\\" Then
+        ' UNC-Pfad (z.B. \\server\...)
+        ConvertRelativeToAbsolutePath = result
+        Exit Function
+    End If
+    
+    ' Relativer Pfad - umwandeln
+    ' Verwende Excel's eigene Funktion für absolute Pfade
+    On Error Resume Next
     Dim fso As Object
     Set fso = CreateObject("Scripting.FileSystemObject")
     
-    ' Wiederhole bis zu 5x bei gesperrter Datei
-    Dim i As Integer
-    For i = 1 To 5
-        On Error Resume Next
-        fso.DeleteFile tempPath, True
-        If Err.Number = 0 Then Exit For
-        If Err.Number = 70 Then
-            Sleep 1000
-        Else
-            Exit For
-        End If
-        On Error GoTo 0
-    Next i
+    ' Kombiniere Basis-Pfad mit relativem Pfad
+    Dim combinedPath As String
+    If Right(basePath, 1) <> "\" Then
+        combinedPath = basePath & "\" & result
+    Else
+        combinedPath = basePath & result
+    End If
     
-    Set fso = Nothing
+    ' Normalisiere den Pfad (löst ..\ auf)
+    result = fso.GetAbsolutePathName(combinedPath)
+    
+    On Error GoTo 0
+    ConvertRelativeToAbsolutePath = result
 End Function
+
+Function ExtractFileUrlFromFormula(formula As String) As String
+    '******************************************************************************
+    ' ** Extrahiert file:/// URLs aus Excel-Formeln **
+    '******************************************************************************
+    Dim result As String
+    result = ""
+    
+    ' Suche nach file: URLs in der Formel
+    Dim startPos As Integer
+    Dim endPos As Integer
+    
+    startPos = InStr(LCase(formula), "file:")
+    If startPos > 0 Then
+        ' Finde das Ende der URL (nächstes Anführungszeichen oder Komma)
+        endPos = startPos
+        Do While endPos <= Len(formula)
+            Dim char As String
+            char = Mid(formula, endPos, 1)
+            If char = """" Or char = "," Or char = ")" Then
+                Exit Do
+            End If
+            endPos = endPos + 1
+        Loop
+        
+        ' Extrahiere die URL
+        result = Mid(formula, startPos, endPos - startPos)
+    End If
+    
+    ExtractFileUrlFromFormula = result
+End Function
+
+Function ConvertFileUrlToPath(fileUrl As String) As String
+    '******************************************************************************
+    ' ** Konvertiert file:/// URLs in normale Dateipfade **
+    '******************************************************************************
+    Dim result As String
+    result = Trim(fileUrl)
+    
+    ' Entferne file:/// Präfix (case-insensitive)
+    If LCase(Left(result, 8)) = "file:///" Then
+        result = Mid(result, 9)
+    ElseIf LCase(Left(result, 7)) = "file://" Then
+        result = Mid(result, 8)
+    ElseIf LCase(Left(result, 5)) = "file:" Then
+        result = Mid(result, 6)
+    End If
+    
+    ' Ersetze / durch \ für Windows-Pfade
+    result = Replace(result, "/", "\")
+    
+    ' URL-Dekodierung für in Windows-Dateinamen erlaubte Zeichen
+    result = Replace(result, "%20", " ")  ' Leerzeichen (häufig)
+    result = Replace(result, "%27", "'")  ' Apostroph
+    result = Replace(result, "%28", "(")  ' Klammer auf
+    result = Replace(result, "%29", ")")  ' Klammer zu
+    result = Replace(result, "%2B", "+")  ' Plus
+    result = Replace(result, "%2C", ",")  ' Komma
+    result = Replace(result, "%2D", "-")  ' Bindestrich
+    result = Replace(result, "%2E", ".")  ' Punkt
+    result = Replace(result, "%3D", "=")  ' Gleichzeichen
+    result = Replace(result, "%40", "@")  ' At-Zeichen
+    result = Replace(result, "%5B", "[")  ' Eckige Klammer auf
+    result = Replace(result, "%5D", "]")  ' Eckige Klammer zu
+    result = Replace(result, "%5F", "_")  ' Unterstrich
+    result = Replace(result, "%60", "`")  ' Backtick
+    result = Replace(result, "%7B", "{")  ' Geschweifte Klammer auf
+    result = Replace(result, "%7D", "}")  ' Geschweifte Klammer zu
+    result = Replace(result, "%7E", "~")  ' Tilde
+    
+    ' Deutsche Umlaute
+    result = Replace(result, "%C3%A4", "ä")  ' ä
+    result = Replace(result, "%C3%B6", "ö")  ' ö
+    result = Replace(result, "%C3%BC", "ü")  ' ü
+    result = Replace(result, "%C3%84", "Ä")  ' Ä
+    result = Replace(result, "%C3%96", "Ö")  ' Ö
+    result = Replace(result, "%C3%9C", "Ü")  ' Ü
+    result = Replace(result, "%C3%9F", "ß")  ' ß
+    
+    ConvertFileUrlToPath = result
+End Function
+
+
