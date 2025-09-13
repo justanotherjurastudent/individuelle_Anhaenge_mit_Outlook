@@ -19,6 +19,11 @@ Nun werden auch (un)geordnete Listen (ggf. mit mehreren Ebenen) sowie abweichend
 Wichtiges Update: Statt das Word-Dokument mit HTML-Tags zu versehen, wird das Dokument temporär als HTML-Dokument abgespeichert und dessen Inhalt wird in die E-Mail eingefügt. So sollten die allermeisten Formatierungen aus Word erhalten bleiben. 
 In einer zusätzlichen Spalte in Excel kann ein Sendezeitpunkt für jede Nachricht angegeben werden, wann die E-Mail versendet werden soll. Der Sendezeitpunkt sollte als TT.MM.JJJJ HH:MM formatiert sein. Die Spalte sollte mit "Sendezeitpunkt" bezeichnet werden, um automatisch erkannt zu werden. Außerdem wird am Anfang der Code-Durchführung ein Check gemacht, ob Outlook im Hintergrund aktiv ist. Wenn nicht, dann sollte Outlook noch gestartet werden.
 
+### Update vom 13.09.2025
+Wichtiges Update: Nun können auch Bilder in die E-Mail eingefügt werden. Möglich macht dies die technische Änderung, dass das Word-Dokument nicht mehr temporär als HTML-Datei abgespeichert wird, sondern der Dokumenteninhalt in die E-Mail hinein kopiert wird (mit den Platzhalterersetzungen).
+Außerdem können Dateinamen nun auch Kommas enthalten - davor war das Komma das unmissverständliche Trennzeichen zwischen zwei Dateipfaden.
+Zuletzt wurden die (Warn)Meldungen verbessert und Debug-Logs in dem Direktbereich im VBA-Editor hinzugefügt.
+
 Supporte meinen frei verfügbaren Content :)
 
 <a href="https://www.buymeacoffee.com/justanotherjurastudent" target="_blank">
