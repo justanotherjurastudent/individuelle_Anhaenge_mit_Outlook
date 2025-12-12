@@ -36,9 +36,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
     Dim xlWS As Excel.Worksheet       ' Excel-Arbeitsblatt
     Dim Pfad As Variant               ' Pfad zur ausgewählten Excel-Datei
     Dim fd As Office.FileDialog       ' Dialog für Dateiauswahl
-    Dim objUndo As UndoRecord         ' Rückgängigmachung für Word-Änderungen
     
-    Set objUndo = Application.UndoRecord
     
     Dim fso As Object                 ' Dateisystem-Objekt für Dateiprüfung
     Set fso = CreateObject("Scripting.FileSystemObject")
@@ -480,8 +478,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             '******************************************************************************
             ' ** 8. Word-Inhalt vorbereiten für E-Mail-Body **
             '******************************************************************************
-            ' Erstelle Kopie des Dokuments für Bearbeitung
-            objUndo.StartCustomRecord "E-Mail Erstellung"
+            ' Hinweis: Es werden keine Änderungen am Originaldokument vorgenommen.
+            ' Daher wird bewusst kein UndoRecord verwendet (würde sonst User-Änderungen rückgängig machen).
 
             '******************************************************************************
             ' ** 9. Anhang-Validierung (MODIFIKATIONSMÖGLICHKEIT: erweiterter Umgang mit Netzwerkpfaden) **
@@ -535,8 +533,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                        fehlerListe & vbCrLf & vbCrLf & _
                        "Bitte korrigieren Sie die Dateipfade in der Excel-Tabelle oder entfernen Sie die fehlerhaften Einträge und starten Sie den Vorgang erneut.", _
                        vbExclamation, "Dateipfad-Fehler"
-                
-                ActiveDocument.Undo
+
                 GoTo Cleanup
             End If
             
@@ -762,13 +759,7 @@ NextIteration:
             '******************************************************************************
             ' ** 12. Abschluss und Bereinigung **
             '******************************************************************************
-            ' Am Ende: Alle Änderungen rückgängig machen
-            On Error Resume Next 
-            If Not objUndo Is Nothing Then
-                objUndo.EndCustomRecord
-                doc.Undo
-            End If
-            On Error GoTo 0
+            ' Keine Undo-Bereinigung nötig, da das Originaldokument nicht verändert wird.
 
             If fehlerMeldung <> "" Then
                 Debug.Print "FEHLER bei der Verarbeitung:"
@@ -845,7 +836,7 @@ Function SplitFilePathsSmart(filePaths As String) As String()
         If char = """" Then
             inQuotes = Not inQuotes
             currentPath = currentPath & char
-        ElseIf char = "," And Not inQuotes Then
+        ElseIf (char = "," Or char = ";") And Not inQuotes Then
             ' Prüfe ob das Komma ein echter Pfad-Trennzeichen ist
             Dim restOfString As String
             restOfString = Mid(filePaths, i + 1)
