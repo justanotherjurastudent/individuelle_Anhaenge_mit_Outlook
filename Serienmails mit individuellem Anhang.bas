@@ -500,29 +500,11 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 
                 For Each file In arrFileNames
                     Dim cleanFile As String
-                    cleanFile = Trim(file)
-                    
-                    ' Debug: Originaler Eintrag aus Excel
-                    ' Debug.Print "Original aus Excel (Zeile " & d & "): '" & cleanFile & "'"
-                    
-                    ' Konvertiere file:/// URLs zu normalen Pfaden
-                    cleanFile = ConvertFileUrlToPath(cleanFile)
-                    
-                    ' Debug: Nach URL-Konvertierung
-                    ' Debug.Print "Nach URL-Konvertierung: '" & cleanFile & "'"
-                    
-                    ' Entferne führende und abschließende Anführungszeichen, falls vorhanden
-                    If Left(cleanFile, 1) = """" Then cleanFile = Mid(cleanFile, 2)
-                    If Right(cleanFile, 1) = """" Then cleanFile = Left(cleanFile, Len(cleanFile) - 1)
-                    
-                    ' Debug: Nach Anführungszeichen-Entfernung
-                    ' Debug.Print "Nach Anführungszeichen-Entfernung: '" & cleanFile & "'"
+                    cleanFile = NormalizeAttachmentPath(CStr(file), xlWS.Parent.Path)
                     
                     If cleanFile <> "" Then
-                        ' Debug: Dateiexistenz-Prüfung
                         Dim fileExists As Boolean
                         fileExists = fso.FileExists(cleanFile)
-                        ' Debug.Print "Datei existiert: " & fileExists & " für '" & cleanFile & "'"
                         
                         If Not fileExists Then
                             fehlerListe = fehlerListe & "Fehler: " & cleanFile & " existiert nicht (Zeile " & d & ")" & vbCrLf
@@ -682,12 +664,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                         Dim attFile As Variant
                         For Each attFile In attachArray
                             Dim cleanAttFile As String
-                            cleanAttFile = Trim(attFile)
-                            ' Konvertiere file:/// URLs zu normalen Pfaden
-                            cleanAttFile = ConvertFileUrlToPath(cleanAttFile)
-                            ' Entferne führende und abschließende Anführungszeichen, falls vorhanden
-                            If Left(cleanAttFile, 1) = """" Then cleanAttFile = Mid(cleanAttFile, 2)
-                            If Right(cleanAttFile, 1) = """" Then cleanAttFile = Left(cleanAttFile, Len(cleanAttFile) - 1)
+                            cleanAttFile = NormalizeAttachmentPath(CStr(attFile), xlWS.Parent.Path)
                             If cleanAttFile <> "" Then
                                 .Attachments.Add cleanAttFile
                             End If
@@ -998,7 +975,13 @@ Function GetCellFilePathsWithHyperlinks(ws As Excel.Worksheet, cellAddress As St
             ' Verwende normalen Zellwert
             result = targetRange.Value
         End If
-        
+
+        ' Leere Zellen dürfen NICHT in den Workbook-Pfad umgewandelt werden
+        If IsNoAttachmentToken(result) Then
+            GetCellFilePathsWithHyperlinks = ""
+            Exit Function
+        End If
+
         ' Wandle auch hier relative Pfade um
         result = ConvertRelativeToAbsolutePath(result, ws.Parent.Path)
     End If
@@ -1012,6 +995,13 @@ Function ConvertRelativeToAbsolutePath(filePath As String, basePath As String) A
     '******************************************************************************
     Dim result As String
     result = Trim(filePath)
+
+    ' WICHTIG: Leere Werte / Platzhalter bedeuten "kein Anhang"
+    ' Sonst würde eine leere Zelle zum basePath werden und in der Validierung fehlschlagen.
+    If IsNoAttachmentToken(result) Then
+        ConvertRelativeToAbsolutePath = ""
+        Exit Function
+    End If
     
     ' Wenn schon absoluter Pfad oder file:/// URL, keine Änderung nötig
     If Len(result) >= 3 And Mid(result, 2, 2) = ":\" Then
@@ -1128,6 +1118,104 @@ Function ConvertFileUrlToPath(fileUrl As String) As String
     result = Replace(result, "%C3%9F", "ß")  ' ß
     
     ConvertFileUrlToPath = result
+End Function
+
+Function IsNoAttachmentToken(value As String) As Boolean
+    '******************************************************************************
+    ' ** Erlaubt E-Mails ohne Anhang: Leere Werte und Platzhalter werden ignoriert **
+    '******************************************************************************
+    Dim s As String
+    s = LCase(Trim(value))
+    
+    Select Case s
+        Case "", "-", "–", "—", "kein", "keine", "keiner", "ohne", "n/a", "na", "null"
+            IsNoAttachmentToken = True
+        Case Else
+            IsNoAttachmentToken = False
+    End Select
+End Function
+
+Function LooksLikeFileReference(value As String) As Boolean
+    '******************************************************************************
+    ' ** Heuristik: Nur plausible Dateireferenzen werden als Anhang interpretiert **
+    '******************************************************************************
+    Dim t As String
+    t = Trim(value)
+    
+    If t = "" Then
+        LooksLikeFileReference = False
+        Exit Function
+    End If
+    
+    If LCase(Left(t, 4)) = "file" Then
+        LooksLikeFileReference = True
+        Exit Function
+    End If
+    
+    If Len(t) >= 3 And Mid(t, 2, 2) = ":\" Then
+        LooksLikeFileReference = True
+        Exit Function
+    End If
+    
+    If Left(t, 2) = "\\" Then
+        LooksLikeFileReference = True
+        Exit Function
+    End If
+    
+    If InStr(t, "\") > 0 Or InStr(t, "/") > 0 Then
+        LooksLikeFileReference = True
+        Exit Function
+    End If
+    
+    If HasFileExtension(t) Then
+        LooksLikeFileReference = True
+        Exit Function
+    End If
+    
+    LooksLikeFileReference = False
+End Function
+
+Function NormalizeAttachmentPath(rawValue As String, basePath As String) As String
+    '******************************************************************************
+    ' ** Normalisiert einen Anhangseintrag; gibt "" zurück wenn kein Anhang gemeint **
+    '******************************************************************************
+    Dim s As String
+    s = Trim(rawValue)
+    
+    If IsNoAttachmentToken(s) Then
+        NormalizeAttachmentPath = ""
+        Exit Function
+    End If
+    
+    ' Konvertiere file:/// URLs zu normalen Pfaden
+    s = ConvertFileUrlToPath(s)
+    
+    ' Entferne führende und abschließende Anführungszeichen, falls vorhanden
+    If Left(s, 1) = """" Then s = Mid(s, 2)
+    If Right(s, 1) = """" Then s = Left(s, Len(s) - 1)
+    s = Trim(s)
+    
+    If IsNoAttachmentToken(s) Then
+        NormalizeAttachmentPath = ""
+        Exit Function
+    End If
+    
+    ' Wenn der Zellinhalt kein plausibler Dateipfad ist (z.B. Freitext), ignorieren.
+    If Not LooksLikeFileReference(s) Then
+        NormalizeAttachmentPath = ""
+        Exit Function
+    End If
+    
+    ' Relative Pfade erst jetzt umwandeln (pro Eintrag, nicht als Gesamtkette)
+    s = ConvertRelativeToAbsolutePath(s, basePath)
+
+    ' Ordner sind keine Anhänge (Outlook erwartet Dateien)
+    If Right(s, 1) = "\" Then
+        NormalizeAttachmentPath = ""
+        Exit Function
+    End If
+    
+    NormalizeAttachmentPath = Trim(s)
 End Function
 
 
