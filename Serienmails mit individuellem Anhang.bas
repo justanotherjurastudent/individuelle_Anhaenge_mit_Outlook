@@ -653,9 +653,29 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     .Subject = strSubj
                     .BodyFormat = 2 ' HTML-Format
                     
-                    ' Word-Inhalt direkt in E-Mail kopieren (behält Bilder bei)
+                    ' Word-Inhalt direkt in E-Mail übernehmen (behält Bilder bei)
+                    ' Wichtig: Kein Clipboard-Paste, da Outlook/WordEditor sonst teils den Stil "Hyperlink"
+                    ' (blau/unterstrichen) auf den eingefügten Text anwenden kann.
+                    ' Hinweis: `Range.FormattedText = ...` kann scheitern, weil Word (Makro) und Outlook
+                    ' WordEditor intern unterschiedliche Word-Instanzen nutzen (COM-Interface-Mismatch).
+                    ' Daher nutzen wir Copy/Paste, aber erzwingen "Originalformatierung".
+                    Dim editorDoc As Object
+                    Set editorDoc = .GetInspector.WordEditor
+                    Dim insertRange As Object
+                    Set insertRange = editorDoc.Range(0, 0)
+
+                    On Error Resume Next
+                    insertRange.Style = editorDoc.Styles(wdStyleNormal)
+                    On Error GoTo ErrorHandler
+
                     tempDoc.Range.Copy
-                    .GetInspector.WordEditor.Range.Paste
+                    On Error Resume Next
+                    insertRange.PasteAndFormat wdFormatOriginalFormatting
+                    If Err.Number <> 0 Then
+                        Err.Clear
+                        insertRange.Paste
+                    End If
+                    On Error GoTo ErrorHandler
                     
                     ' Anhänge hinzufügen
                     If strAttach <> "" Then
