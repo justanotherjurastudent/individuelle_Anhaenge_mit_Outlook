@@ -876,7 +876,7 @@ Function SplitFilePathsSmart(filePaths As String) As String()
             inQuotes = Not inQuotes
             currentPath = currentPath & char
         ElseIf (char = "," Or char = ";") And Not inQuotes Then
-            ' Prüfe ob das Komma ein echter Pfad-Trennzeichen ist
+            ' Prüfe ob das Trennzeichen ein echter Pfad-Trennzeichen ist
             Dim restOfString As String
             restOfString = Mid(filePaths, i + 1)
             
@@ -888,20 +888,20 @@ Function SplitFilePathsSmart(filePaths As String) As String()
             isPathSeparator = False
             
             If Len(trimmedRest) > 0 Then
-                ' Fall 1: Komma vor Dateierweiterung (z.B. "file,.pdf")
+                ' Fall 1: Trenner vor Dateierweiterung (z.B. "file;.pdf")
                 If Left(trimmedRest, 1) = "." Then
                     isPathSeparator = False
-                ' Fall 2: Komma vor neuem Pfad mit Laufwerksbuchstabe (z.B. "C:\")
-                ElseIf Len(trimmedRest) >= 3 And Mid(trimmedRest, 2, 2) = ":\" Then
+                ' Fall 2: Trenner vor neuem Pfad mit Laufwerksbuchstabe (z.B. "C:\" oder "C:/")
+                ElseIf Len(trimmedRest) >= 3 And (Mid(trimmedRest, 2, 2) = ":\" Or Mid(trimmedRest, 2, 2) = ":/") Then
                     isPathSeparator = True
-                ' Fall 3: Komma vor UNC-Pfad (z.B. "\\server\")
-                ElseIf Len(trimmedRest) >= 2 And Left(trimmedRest, 2) = "\\" Then
+                ' Fall 3: Trenner vor UNC-Pfad (z.B. "\\server\" oder "//server/")
+                ElseIf Len(trimmedRest) >= 2 And (Left(trimmedRest, 2) = "\\" Or Left(trimmedRest, 2) = "//") Then
                     isPathSeparator = True
-                ' Fall 4: Komma vor Anführungszeichen (neuer quoted Pfad)
+                ' Fall 4: Trenner vor Anführungszeichen (neuer quoted Pfad)
                 ElseIf Left(trimmedRest, 1) = """" Then
                     isPathSeparator = True
-                ' Fall 5: Komma vor absolutem Pfad (z.B. "\folder\")
-                ElseIf Left(trimmedRest, 1) = "\" Then
+                ' Fall 5: Trenner vor absolutem Pfad (z.B. "\folder\" oder "/folder/")
+                ElseIf Left(trimmedRest, 1) = "\" Or Left(trimmedRest, 1) = "/" Then
                     isPathSeparator = True
                 Else
                     ' Fallback: Prüfe ob der aktuelle Pfad bereits vollständig aussieht
@@ -960,14 +960,16 @@ Function HasFileExtension(filePath As String) As Boolean
         cleanPath = Mid(cleanPath, 2, Len(cleanPath) - 2)
     End If
     
-    ' Suche nach dem letzten Punkt
+    ' Suche nach dem letzten Punkt und Pfadtrennern
     Dim lastDotPos As Integer
     Dim lastSlashPos As Integer
+    Dim lastBackslashPos As Integer
     lastDotPos = InStrRev(cleanPath, ".")
-    lastSlashPos = InStrRev(cleanPath, "\")
+    lastSlashPos = InStrRev(cleanPath, "/")
+    lastBackslashPos = InStrRev(cleanPath, "\")
     
-    ' Ein Punkt muss vorhanden sein und nach dem letzten Backslash kommen
-    If lastDotPos > 0 And lastDotPos > lastSlashPos Then
+    ' Ein Punkt muss vorhanden sein und nach dem letzten Pfadtrenner kommen
+    If lastDotPos > 0 And lastDotPos > lastSlashPos And lastDotPos > lastBackslashPos Then
         ' Prüfe ob nach dem Punkt noch 1-4 Zeichen kommen (typische Erweiterung)
         Dim extensionLength As Integer
         extensionLength = Len(cleanPath) - lastDotPos
@@ -1014,9 +1016,6 @@ Function GetCellFilePathsWithHyperlinks(ws As Excel.Worksheet, cellAddress As St
             result = hyperlink.TextToDisplay
         End If
         
-        ' Wandle relative Pfade in absolute Pfade um
-        result = ConvertRelativeToAbsolutePath(result, ws.Parent.Path)
-        
     Else
         ' Kein Hyperlink - prüfe trotzdem die Formel
         If InStr(targetRange.Formula, "file:") > 0 Then
@@ -1026,14 +1025,11 @@ Function GetCellFilePathsWithHyperlinks(ws As Excel.Worksheet, cellAddress As St
             result = targetRange.Value
         End If
 
-        ' Leere Zellen dürfen NICHT in den Workbook-Pfad umgewandelt werden
+        ' Leere Zellen dürfen NICHT verarbeitet werden
         If IsNoAttachmentToken(result) Then
             GetCellFilePathsWithHyperlinks = ""
             Exit Function
         End If
-
-        ' Wandle auch hier relative Pfade um
-        result = ConvertRelativeToAbsolutePath(result, ws.Parent.Path)
     End If
     
     GetCellFilePathsWithHyperlinks = result
@@ -1047,23 +1043,27 @@ Function ConvertRelativeToAbsolutePath(filePath As String, basePath As String) A
     result = Trim(filePath)
 
     ' WICHTIG: Leere Werte / Platzhalter bedeuten "kein Anhang"
-    ' Sonst würde eine leere Zelle zum basePath werden und in der Validierung fehlschlagen.
     If IsNoAttachmentToken(result) Then
         ConvertRelativeToAbsolutePath = ""
         Exit Function
     End If
     
+    ' Hilfsvariable für die Prüfung ohne Anführungszeichen
+    Dim checkPath As String
+    checkPath = result
+    If Left(checkPath, 1) = """" Then checkPath = Mid(checkPath, 2)
+    
     ' Wenn schon absoluter Pfad oder file:/// URL, keine Änderung nötig
-    If Len(result) >= 3 And Mid(result, 2, 2) = ":\" Then
-        ' Schon absoluter Pfad (z.B. C:\...)
+    If Len(checkPath) >= 3 And (Mid(checkPath, 2, 2) = ":\" Or Mid(checkPath, 2, 2) = ":/") Then
+        ' Schon absoluter Pfad (z.B. C:\... oder C:/...)
         ConvertRelativeToAbsolutePath = result
         Exit Function
-    ElseIf LCase(Left(result, 4)) = "file" Then
+    ElseIf LCase(Left(checkPath, 4)) = "file" Then
         ' Schon file:/// URL
         ConvertRelativeToAbsolutePath = result
         Exit Function
-    ElseIf Left(result, 2) = "\\" Then
-        ' UNC-Pfad (z.B. \\server\...)
+    ElseIf Left(checkPath, 2) = "\\" Or Left(checkPath, 2) = "//" Then
+        ' UNC-Pfad (z.B. \\server\... oder //server/...)
         ConvertRelativeToAbsolutePath = result
         Exit Function
     End If
@@ -1202,12 +1202,12 @@ Function LooksLikeFileReference(value As String) As Boolean
         Exit Function
     End If
     
-    If Len(t) >= 3 And Mid(t, 2, 2) = ":\" Then
+    If Len(t) >= 3 And (Mid(t, 2, 2) = ":\" Or Mid(t, 2, 2) = ":/") Then
         LooksLikeFileReference = True
         Exit Function
     End If
     
-    If Left(t, 2) = "\\" Then
+    If Left(t, 2) = "\\" Or Left(t, 2) = "//" Then
         LooksLikeFileReference = True
         Exit Function
     End If
@@ -1260,7 +1260,7 @@ Function NormalizeAttachmentPath(rawValue As String, basePath As String) As Stri
     s = ConvertRelativeToAbsolutePath(s, basePath)
 
     ' Ordner sind keine Anhänge (Outlook erwartet Dateien)
-    If Right(s, 1) = "\" Then
+    If Right(s, 1) = "\" Or Right(s, 1) = "/" Then
         NormalizeAttachmentPath = ""
         Exit Function
     End If

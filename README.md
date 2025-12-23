@@ -68,7 +68,7 @@ Supporte meinen frei verfügbaren Content :)
 |---|---|---|---|
 | E‑Mail                  | Empfängeradresse (.To)                | Ja                                | `alice@example.org` |
 | Betreff                 | Betreffzeile                          | Ja                                | „Ihre Unterlagen 2025“ |
-| Anhang / Anhänge        | Dateipfade pro Zeile                  | Spalte empfohlen, Zellen optional | `C:\A\1.pdf, C:\A\2.pdf` |
+| Anhang / Anhänge        | Dateipfade pro Zeile                  | Spalte empfohlen, Zellen optional | `C:\A\1.pdf; C:\A\2.pdf` |
 | CC                      | Kopie‑Empfänger                       | Optional                          | `team@example.org; buchhaltung@example.org` |
 | BCC                     | Blindkopie                            | Optional                          | `leitung@example.org` |
 | Anrede                  | Anrede‑Quelle                         | Optional                          | „Herr“/„Frau“ (für formelle Logik) oder frei |
@@ -83,9 +83,9 @@ Supporte meinen frei verfügbaren Content :)
 > - **Datenbereich:** Der Code erkennt das Ende der Tabelle automatisch, auch wenn in der ersten Spalte (A) einzelne Zellen leer sind.
 
 > [!IMPORTANT]
-> - Mehrere Anhänge werden in EINER Zelle durch ein **Komma** getrennt, z. B.:  
->   `C:\Rechnungen\RE-4711.pdf, C:\Rechnungen\AGB.pdf`  
-> - Der Dateipfadseparator in Windows ist weiterhin `\`. Das **Komma** trennt nur mehrere Pfade innerhalb derselben Zelle.  
+> - Mehrere Anhänge werden in EINER Zelle durch ein **Komma** oder **Semikolon** getrennt, z. B.:  
+>   `C:\Rechnungen\RE-4711.pdf; C:\Rechnungen\AGB.pdf`  
+> - Als Dateipfadseparator werden sowohl der Windows-Standard `\` als auch `/` unterstützt. Das **Komma** oder **Semikolon** trennt nur mehrere Pfade innerhalb derselben Zelle.  
 > - Der Code verarbeitet zuverlässig: in Anführungszeichen gesetzte Pfade, **Kommas im Dateinamen**, `file:///`‑URLs, UNC‑Pfade (`\\Server\Freigabe\...`) und **relative Pfade** relativ zum Speicherort der Excel‑Datei. Hyperlinks in Zellen werden berücksichtigt.
 
 > [!WARNING]
@@ -174,13 +174,13 @@ Freundliche Grüße
 
 | E‑Mail             | Betreff                     | Anhang                                                     | CC                      | BCC               | Sendezeitpunkt  | Anrede | Titel | Vorname | Nachname | Unternehmen      |
 |---|---|---|---|---|---|---|---|---|---|---|
-| alice@beispiel.de  | Ihre Rechnung RE‑4711       | C:\Rechnungen\RE‑4711.pdf, C:\Rechnungen\AGB.pdf          | buchhaltung@beispiel.de |                   | 2025-09-15 09:00 | Frau   | Dr.   | Alice   | Beispiel  | Beispiel GmbH    |
-| bob@beispiel.de    | Einladung zum Webinar       | C:\Einladungen\Bob.pdf                                    |                         |                   |                 | Herr   |       | Bob     | Muster    | Muster AG        |
+| alice@beispiel.de  | Ihre Rechnung RE‑4711       | C:\Rechnungen\RE‑4711.pdf; C:\Rechnungen\AGB.pdf          | buchhaltung@beispiel.de |                   | 2025-09-15 09:00 | Frau   | Dr.   | Alice   | Beispiel  | Beispiel GmbH    |
+| bob@beispiel.de    | Einladung zum Webinar       | C:/Einladungen/Bob.pdf                                    |                         |                   |                 | Herr   |       | Bob     | Muster    | Muster AG        |
 | clara@beispiel.de  | Dokumente zur Vertragsänderung | \\server\share\Clara\Aenderung.pdf                       | team@beispiel.de        | chef@beispiel.de  | 15.09.2025 14:30 |        |       | Clara   | Meyer    | ACME SE          |
 
 > [!NOTE]
 > - Leer gelassene „Sendezeitpunkt“‑Zellen bedeuten Sofortversand (bzw. keine verzögerte Zustellung).  
-> - In „Anhang“ können Pfade in Anführungszeichen stehen. Kommas im Dateinamen sind erlaubt; die Aufteilung trennt zuverlässig zwischen Trennkomma und Komma im Namen.
+> - In „Anhang“ können Pfade in Anführungszeichen stehen. Kommas oder Semikolons im Dateinamen sind erlaubt; die Aufteilung trennt zuverlässig zwischen Trennzeichen und Zeichen im Namen.
 
 ***
 
@@ -193,7 +193,7 @@ Freundliche Grüße
   → In Word unter „Extras → Verweise…“ die Office‑Bibliotheken aktivieren.
 
 - „Datei nicht gefunden“ in der Anhang‑Prüfung  
-  → Pfade korrigieren, Berechtigungen prüfen, Netzlaufwerke eingebunden, `file:///`‑URLs korrekt, relative Pfade relativ zum Excel‑Dateiordner verstehen.
+  → Pfade korrigieren, Berechtigungen prüfen, Netzlaufwerke eingebunden, `file:///`‑URLs korrekt, relative Pfade relativ zum Excel‑Dateiordner verstehen. Sowohl `\` als auch `/` sind als Pfadtrenner zulässig.
 
 - Ungültiger „Sendezeitpunkt“  
   → Zellenformat auf Datum/Uhrzeit setzen; lokal gültige Eingaben verwenden; nur zukünftige Zeitpunkte verzögern den Versand.
@@ -226,8 +226,8 @@ Freundliche Grüße
   - `Anrede`, `Titel`, `Vorname`, `Nachname`, `Unternehmen/Unternehmensname`, `CC`, `BCC`, `Sendezeitpunkt`
 
 > [!IMPORTANT]
-> - Mehrere Anhänge in EINER Zelle per Komma trennen.  
-> - Windows‑Pfade nutzen den Backslash `\`. Das Komma ist ausschließlich der Trennzeichen zwischen mehreren Pfaden in einer Zelle.
+> - Mehrere Anhänge in EINER Zelle per Komma oder Semikolon trennen.  
+> - Sowohl `\` als auch `/` werden als Dateipfadseparator unterstützt. Das Komma/Semikolon dient ausschließlich als Trennzeichen zwischen mehreren Pfaden in einer Zelle.
 
 ***
 
@@ -259,5 +259,6 @@ Zuletzt wurden die (Warn)Meldungen verbessert und Debug-Logs in dem Direktbereic
 
 ### Update vom 23.12.2025
 Wichtiges Update zur Textqualität: Der Code bereinigt nun automatisch doppelte Leerzeichen und entfernt Leerzeichen vor Satzzeichen, die oft durch optionale, aber leere Platzhalter (wie `%Titel%`) entstehen. Zudem werden Anreden und Titel nun konsequent getrimmt. Die Erkennung der letzten Zeile in Excel wurde verbessert, sodass leere Zellen in der ersten Spalte nicht mehr zum vorzeitigen Abbruch führen.
+Zudem werden nun sowohl `/` als auch `\` als Dateipfadseparatoren unterstützt und Anhänge können flexibel durch Komma oder Semikolon getrennt werden.
 
 
