@@ -119,7 +119,7 @@ Supporte meinen frei verfügbaren Content :)
 - Gibt es mehrere Blätter, wird eine nummerierte Liste angezeigt und nach der Blattnummer gefragt. Leere Eingabe beendet den Vorgang.
 
 4) Spalten finden & bestätigen  
-- Der Code sucht automatisch: „Anrede“, „Titel“, „Vorname“, „Nachname“, „Unternehmen/Unternehmensname“, „E‑Mail“, „Betreff“, „Anhang/Anhänge“, „CC“, „BCC“, „Sendezeitpunkt“.  
+- Der Code sucht automatisch: „Anrede“, „Titel“, „Vorname“, „Nachname“, „Unternehmen/Unternehmensname“, „E‑Mail“, „Betreff“, „Anhang/Anhänge“, „CC“, „BCC“ sowie „Sendezeitpunkt“.  
 - Danach zeigt er eine Übersicht der erkannten Spaltenbuchstaben und fragt: „Sind Sie einverstanden?“  
   - „Ja“: weiter  
   - „Nein“: gezielte Korrektur einzelner Spalten (Buchstaben eingeben)  
@@ -136,16 +136,19 @@ Supporte meinen frei verfügbaren Content :)
   - „Ja“: Wenn in Excel „Frau“ → „Sehr geehrte Frau“, „Herr“ → „Sehr geehrter Herr“  
   - „Nein“: Anrede wird aus Excel unverändert übernommen (auch freier Text möglich)
 
-7) Versandmodus wählen  
+7) Sendezeitpunkt bestätigen (falls nötig)
+- Falls die Spalte „Sendezeitpunkt“ im Schritt 4 nicht automatisch gefunden oder manuell korrigiert wurde, erscheint hier eine zusätzliche Abfrage.
+
+8) Versandmodus wählen  
 - Abfrage: „E‑Mails direkt versenden?“  
   - „Ja“: zusätzliche Sicherheitsbestätigung; E‑Mails werden automatisch gesendet  
   - „Nein“: E‑Mails werden nur generiert und im Editor angezeigt (Entwürfe prüfen/senden)
 
-8) Anhang‑Validierung  
+9) Anhang‑Validierung  
 - Der Code prüft für jede Zeile die Existenz der angegebenen Dateien. Fehlende Dateien werden zeilenweise gelistet.  
 - Bei Fehlern: Dialog mit Zusammenfassung; Ablauf wird beendet, damit die Pfade korrigiert werden können.
 
-9) E‑Mail‑Erstellung  
+10) E‑Mail‑Erstellung  
 - Für jede Zeile wird ein temporäres Word‑Dokument erstellt, die Platzhalter (%Anrede% etc.) ersetzt und der Inhalt als HTML in eine neue Outlook‑Mail kopiert.  
 - Dann werden Anhänge aus der Zelle hinzugefügt. `file:///`‑URLs werden in Pfade umgewandelt; Anführungszeichen an den Enden werden entfernt; relative Pfade werden relativ zum Workbook‑Ordner aufgelöst.  
 - Ist ein gültiger zukünftiger „Sendezeitpunkt“ gesetzt, wird die verzögerte Zustellung aktiviert; bei ungültigen Werten erscheint eine Warnung.
