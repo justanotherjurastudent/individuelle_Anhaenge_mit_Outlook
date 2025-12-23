@@ -5,7 +5,7 @@ Kurzüberblick: Diese README erklärt laienverständlich, wie mit dem Word‑Mak
 Neben dieser Anleitung gibt es noch meinen bebilderten Blogbeitrag: [hier geht's zu meinen Blog mit der Anleitung](https://blogs.urz.uni-halle.de/simpletricks/2023/03/serien-e-mails-mit-individuellen-anhaengen/)
 
 > [!IMPORTANT]
-> Diese Anleitung ist 1:1 an den vorliegenden VBA‑Code angepasst: Erforderlich sind die Spalten „E‑Mail“ und „Betreff“. Die Spalte „Anhang/Anhänge“ sollte als Spalte vorhanden sein (auch wenn einzelne Zellen leer bleiben), da der Code eine Validierungsschleife über diese Spalte ausführt.
+> Diese Anleitung ist 1:1 an den vorliegenden VBA‑Code angepasst: Erforderlich sind die Spalten „E‑Mail“ und „Betreff“. Alle anderen Spalten sind optional.
 
 Supporte meinen frei verfügbaren Content :)
 
@@ -68,10 +68,10 @@ Supporte meinen frei verfügbaren Content :)
 |---|---|---|---|
 | E‑Mail                  | Empfängeradresse (.To)                | Ja                                | `alice@example.org` |
 | Betreff                 | Betreffzeile                          | Ja                                | „Ihre Unterlagen 2025“ |
-| Anhang / Anhänge        | Dateipfade pro Zeile                  | Spalte empfohlen, Zellen optional | `C:\A\1.pdf; C:\A\2.pdf` |
+| Anhang / Anhänge        | Dateipfade pro Zeile                  | Optional                          | `C:\A\1.pdf; C:\A\2.pdf` |
 | CC                      | Kopie‑Empfänger                       | Optional                          | `team@example.org; buchhaltung@example.org` |
 | BCC                     | Blindkopie                            | Optional                          | `leitung@example.org` |
-| Anrede                  | Anrede‑Quelle                         | Optional                          | „Herr“/„Frau“ (für formelle Logik) oder frei |
+| Anrede                  | Anrede‑Quelle                         | Optional                          | „Herr“/„m“/„Frau“/„w“ (für formelle Logik) |
 | Titel                   | Titel vor dem Namen                   | Optional                          | „Dr.“ |
 | Vorname                 | Vorname                               | Optional                          | „Max“ |
 | Nachname                | Nachname                              | Optional                          | „Mustermann“ |
@@ -83,13 +83,14 @@ Supporte meinen frei verfügbaren Content :)
 > - **Datenbereich:** Der Code erkennt das Ende der Tabelle automatisch, auch wenn in der ersten Spalte (A) einzelne Zellen leer sind.
 
 > [!IMPORTANT]
+> - Wenn Sie die formelle Anrede (Sehr geehrte ...) benutzen, erkennt der Code automatisch verschiedene Angaben in der Spalte „Anrede“:
+>   - **Männlich:** „Herr“, „m“, „Mann“, „männlich“ → *Sehr geehrter Herr*
+>   - **Weiblich:** „Frau“, „w“, „f“, „weiblich“ → *Sehr geehrte Frau*
 > - Mehrere Anhänge werden in EINER Zelle durch ein **Komma** oder **Semikolon** getrennt, z. B.:  
 >   `C:\Rechnungen\RE-4711.pdf; C:\Rechnungen\AGB.pdf`  
 > - Als Dateipfadseparator werden sowohl der Windows-Standard `\` als auch `/` unterstützt. Das **Komma** oder **Semikolon** trennt nur mehrere Pfade innerhalb derselben Zelle.  
-> - Der Code verarbeitet zuverlässig: in Anführungszeichen gesetzte Pfade, **Kommas im Dateinamen**, `file:///`‑URLs, UNC‑Pfade (`\\Server\Freigabe\...`) und **relative Pfade** relativ zum Speicherort der Excel‑Datei. Hyperlinks in Zellen werden berücksichtigt.
+> - Der Code verarbeitet zuverlässig in Anführungszeichen gesetzte Pfade, **Kommas im Dateinamen**, `file:///`‑URLs, UNC‑Pfade (`\\Server\Freigabe\...`) und **relative Pfade** relativ zum Speicherort der Excel‑Datei. Hyperlinks in Zellen werden berücksichtigt.
 
-> [!WARNING]
-> - Die Spalte „Anhang/Anhänge“ sollte als Spalte vorhanden sein (auch wenn einzelne Zellen leer sind). Ohne definierte Spalte kann die Anhang‑Validierung fehlschlagen.  
 > - Dateipfade müssen existieren und lesbar sein. Fehler werden gesammelt angezeigt und der Vorgang bricht zur Korrektur ab.
 
 ***
@@ -124,7 +125,7 @@ Supporte meinen frei verfügbaren Content :)
   - „Ja“: weiter  
   - „Nein“: gezielte Korrektur einzelner Spalten (Buchstaben eingeben)  
   - „Abbrechen“: beendet  
-- Wichtig: „E‑Mail“ und „Betreff“ müssen gesetzt sein; fehlen sie, wird abgebrochen. „Anhang/Anhänge“ sollte als Spalte definiert sein (Zellen dürfen leer sein).
+- Wichtig: „E‑Mail“ und „Betreff“ müssen gesetzt sein; fehlen sie, wird abgebrochen.
 
 5) Startzeile festlegen  
 - Abfrage: „Beginnen die Daten ab Zeile 2?“  
@@ -218,12 +219,8 @@ Freundliche Grüße
   - `E‑Mail`  
   - `Betreff`
 
-- Spalte empfohlen (Zellen optional):  
-  - `Anhang`/`Anhänge`  
-    - Pro Zeile können die Zellen leer sein; die Spalte sollte jedoch existieren, damit die Validierung korrekt läuft.
-
-- Weitere optionale Spalten:  
-  - `Anrede`, `Titel`, `Vorname`, `Nachname`, `Unternehmen/Unternehmensname`, `CC`, `BCC`, `Sendezeitpunkt`
+- Optionale Spalten:  
+  - `Anhang`, `CC`, `BCC`, `Anrede`, `Titel`, `Vorname`, `Nachname`, `Unternehmen/Unternehmensname`, `Sendezeitpunkt`
 
 > [!IMPORTANT]
 > - Mehrere Anhänge in EINER Zelle per Komma oder Semikolon trennen.  
@@ -259,6 +256,6 @@ Zuletzt wurden die (Warn)Meldungen verbessert und Debug-Logs in dem Direktbereic
 
 ### Update vom 23.12.2025
 Wichtiges Update zur Textqualität: Der Code bereinigt nun automatisch doppelte Leerzeichen und entfernt Leerzeichen vor Satzzeichen, die oft durch optionale, aber leere Platzhalter (wie `%Titel%`) entstehen. Zudem werden Anreden und Titel nun konsequent getrimmt. Die Erkennung der letzten Zeile in Excel wurde verbessert, sodass leere Zellen in der ersten Spalte nicht mehr zum vorzeitigen Abbruch führen.
-Zudem werden nun sowohl `/` als auch `\` als Dateipfadseparatoren unterstützt und Anhänge können flexibel durch Komma oder Semikolon getrennt werden.
+Zudem werden nun sowohl `/` als auch `\` als Dateipfadseparatoren unterstützt und Anhänge können flexibel durch Komma oder Semikolon getrennt werden. Die formelle Anrede erkennt nun zudem flexibel verschiedene Geschlechtsangaben (m/w/f/Mann/weiblich etc.). Die Anhang-Spalte ist nun zudem vollkommen optional und muss nicht mehr zwingend in der Excel-Tabelle existieren.
 
 

@@ -447,7 +447,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             '******************************************************************************
             Dim useCustomAnredeRes As VbMsgBoxResult
             useCustomAnredeRes = MsgBox("Möchten Sie die voreingestellte formelle Anrede übernehmen?" & vbCrLf & _
-            "Diese wäre für Herr = 'Sehr geehrter Herr' und für Frau = 'Sehr geehrte Frau'.", vbYesNoCancel + vbQuestion, "Formelle Anrede")
+            "Diese erkennt automatisch verschiedene Angaben (z.B. Herr, m, Mann / Frau, w, weiblich) " & vbCrLf & _
+            "und wandelt sie in 'Sehr geehrter Herr' bzw. 'Sehr geehrte Frau' um.", vbYesNoCancel + vbQuestion, "Formelle Anrede")
             If useCustomAnredeRes = vbCancel Then GoTo Cleanup
             Dim useCustomAnrede As Boolean
             useCustomAnrede = (useCustomAnredeRes = vbYes)
@@ -497,27 +498,29 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             
             Debug.Print "Zu verarbeitende Zeilen: " & (lastRow - startRow + 1) & " (Zeilen " & startRow & " bis " & lastRow & ")"
             
-            For d = startRow To lastRow
-                Dim DateipfadCheck As String
-                ' Berücksichtige Hyperlinks in Excel-Zellen
-                DateipfadCheck = GetCellFilePathsWithHyperlinks(xlWS, SpalteAttach & d)
-                Dim arrFileNames() As String
-                arrFileNames = SplitFilePathsSmart(DateipfadCheck)
-                
-                For Each file In arrFileNames
-                    Dim cleanFile As String
-                    cleanFile = NormalizeAttachmentPath(CStr(file), xlWS.Parent.Path)
+            If SpalteAttach <> "" Then
+                For d = startRow To lastRow
+                    Dim DateipfadCheck As String
+                    ' Berücksichtige Hyperlinks in Excel-Zellen
+                    DateipfadCheck = GetCellFilePathsWithHyperlinks(xlWS, SpalteAttach & d)
+                    Dim arrFileNames() As String
+                    arrFileNames = SplitFilePathsSmart(DateipfadCheck)
                     
-                    If cleanFile <> "" Then
-                        Dim fileExists As Boolean
-                        fileExists = fso.FileExists(cleanFile)
+                    For Each file In arrFileNames
+                        Dim cleanFile As String
+                        cleanFile = NormalizeAttachmentPath(CStr(file), xlWS.Parent.Path)
                         
-                        If Not fileExists Then
-                            fehlerListe = fehlerListe & "Fehler: " & cleanFile & " existiert nicht (Zeile " & d & ")" & vbCrLf
+                        If cleanFile <> "" Then
+                            Dim fileExists As Boolean
+                            fileExists = fso.FileExists(cleanFile)
+                            
+                            If Not fileExists Then
+                                fehlerListe = fehlerListe & "Fehler: " & cleanFile & " existiert nicht (Zeile " & d & ")" & vbCrLf
+                            End If
                         End If
-                    End If
+                    Next
                 Next
-            Next
+            End If
             
             If fehlerListe <> "" Then
                 Debug.Print "FEHLER in Anhang-Validierung:"
@@ -618,10 +621,13 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 
                 ' Anrede-Behandlung
                 If useCustomAnrede Then
-                    Select Case strAnrede
-                        Case "Frau": strAnrede = "Sehr geehrte Frau"
-                        Case "Herr": strAnrede = "Sehr geehrter Herr"
-                        Case Else: strAnrede = ""
+                    Select Case LCase(strAnrede)
+                        Case "frau", "w", "f", "weiblich"
+                            strAnrede = "Sehr geehrte Frau"
+                        Case "herr", "m", "mann", "männlich"
+                            strAnrede = "Sehr geehrter Herr"
+                        Case Else
+                            strAnrede = ""
                     End Select
                 Else
                     ' Bei Nein: Zellinhalt unverändert nutzen.
