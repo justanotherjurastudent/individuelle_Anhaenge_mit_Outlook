@@ -148,7 +148,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Dim AnredeRange As Excel.Range
             Set AnredeRange = xlWS.Range("A1:Z1").Find("Anrede", LookIn:=xlValues, LookAt:=xlWhole)
             If AnredeRange Is Nothing Then
-                SpalteAnrede = InputBox("Spalte für ""Anrede"" (z.B. A oder leer lassen, wenn nicht vorhanden):")
+                SpalteAnrede = InputBox("Spalte für ""Anrede"" (z.B. A oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
             Else
                 SpalteAnrede = Chr(AnredeRange.Column + 64)
             End If
@@ -157,7 +157,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Dim TitelRange As Excel.Range
             Set TitelRange = xlWS.Cells.Find("Titel", LookIn:=xlValues, LookAt:=xlWhole)
             If TitelRange Is Nothing Then
-                SpalteTitel = InputBox("Spalte für ""Titel"" (z.B. B oder leer lassen, wenn nicht vorhanden):")
+                SpalteTitel = InputBox("Spalte für ""Titel"" (z.B. B oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
             Else
                 SpalteTitel = Chr(TitelRange.Column + 64)
             End If
@@ -166,7 +166,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Dim VornameRange As Excel.Range
             Set VornameRange = xlWS.Cells.Find("Vorname", LookIn:=xlValues, LookAt:=xlWhole)
             If VornameRange Is Nothing Then
-                SpalteVorname = InputBox("Spalte für ""Vorname"" (z.B. C oder leer lassen, wenn nicht vorhanden):")
+                SpalteVorname = InputBox("Spalte für ""Vorname"" (z.B. C oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
             Else
                 SpalteVorname = Chr(VornameRange.Column + 64)
             End If
@@ -175,7 +175,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Dim NachnameRange As Excel.Range
             Set NachnameRange = xlWS.Cells.Find("Nachname", LookIn:=xlValues, LookAt:=xlWhole)
             If NachnameRange Is Nothing Then
-                SpalteNachname = InputBox("Spalte für ""Nachname"" (z.B. D oder leer lassen, wenn nicht vorhanden):")
+                SpalteNachname = InputBox("Spalte für ""Nachname"" (z.B. D oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
             Else
                 SpalteNachname = Chr(NachnameRange.Column + 64)
             End If
@@ -192,7 +192,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 End If
             Next term
             If UnternehmenRange Is Nothing Then
-                SpalteUnternehmen = InputBox("Spalte für ""Unternehmen"" (z.B. X oder leer lassen, wenn nicht vorhanden):")
+                SpalteUnternehmen = InputBox("Spalte für ""Unternehmen"" (z.B. X oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
             End If
             
             ' E-Mail-Spalte finden
@@ -207,7 +207,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 End If
             Next term
             If ToRange Is Nothing Then
-                SpalteTo = InputBox("Spalte für ""E-Mail"" (z.B. E):")
+                SpalteTo = InputBox("Spalte für ""E-Mail"" (z.B. E):", "Spalte finden")
                 If SpalteTo = "" Then
                     MsgBox "Die Spalte mit den E-Mail-Adressen muss definiert sein. Vorgang wurde abgebrochen.", vbExclamation
                     GoTo Cleanup
@@ -219,7 +219,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Dim SpalteCC As String
             Set CCRange = xlWS.Cells.Find("CC", LookIn:=xlValues, LookAt:=xlWhole)
             If CCRange Is Nothing Then
-                SpalteCC = InputBox("Spalte für ""CC"" (z.B. H oder leer lassen, wenn nicht vorhanden):")
+                SpalteCC = InputBox("Spalte für ""CC"" (z.B. H oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
             Else
                 SpalteCC = Chr(CCRange.Column + 64)
             End If
@@ -229,7 +229,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Dim SpalteBCC As String
             Set BCCRange = xlWS.Cells.Find("BCC", LookIn:=xlValues, LookAt:=xlWhole)
             If BCCRange Is Nothing Then
-                SpalteBCC = InputBox("Spalte für ""BCC"" (z.B. I oder leer lassen, wenn nicht vorhanden):")
+                SpalteBCC = InputBox("Spalte für ""BCC"" (z.B. I oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
             Else
                 SpalteBCC = Chr(BCCRange.Column + 64)
             End If
@@ -238,7 +238,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Dim BetreffRange As Excel.Range
             Set BetreffRange = xlWS.Cells.Find("Betreff", LookIn:=xlValues, LookAt:=xlWhole)
             If BetreffRange Is Nothing Then
-                SpalteSubj = InputBox("Spalte für ""Betreff"" (z.B. F oder leer lassen, wenn nicht vorhanden):")
+                SpalteSubj = InputBox("Spalte für ""Betreff"" (z.B. F oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
                 If SpalteSubj = "" Then
                     MsgBox "Die Spalte mit dem E-Mail-Betreff muss definiert sein. Vorgang wurde abgebrochen.", vbExclamation
                     GoTo Cleanup
@@ -259,17 +259,16 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 End If
             Next term
             If AnhangRange Is Nothing Then
-                SpalteAttach = InputBox("Spalte für Anhänge (z.B. G oder leer lassen, wenn nicht vorhanden):")
+                SpalteAttach = InputBox("Spalte für Anhänge (z.B. G oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
             End If
 
+            ' Sendezeitpunkt-Spalte vorab suchen (ohne sofortige Abfrage)
             Dim SendezeitpunktRange As Excel.Range
             Set SendezeitpunktRange = xlWS.Cells.Find("Sendezeitpunkt", LookIn:=xlValues, LookAt:=xlWhole)
-            If SendezeitpunktRange Is Nothing Then
-                SpalteSendezeitpunkt = InputBox("Spalte für Sendezeitpunkt (z.B. K oder leer lassen, wenn nicht vorhanden):")
-            Else
+            If Not SendezeitpunktRange Is Nothing Then
                 SpalteSendezeitpunkt = Chr(SendezeitpunktRange.Column + 64)
             End If
-            
+
             ' Benutzerbestätigung der Spalten
             Dim confirmColumns As VbMsgBoxResult
             Dim correctionLoop As Boolean
@@ -328,7 +327,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                         num = Val(selectedColumn)
                         
                         Select Case num
-                            Case 1 To 10
+                            Case 1 To 11
                                 Select Case num
                                     Case 1
                                         neueSpalte = InputBox("Neue Spalte für Anrede (z.B. A):", "Anrede")
@@ -453,6 +452,18 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Dim useCustomAnrede As Boolean
             useCustomAnrede = (useCustomAnredeRes = vbYes)
             
+            '******************************************************************************
+            ' ** 6a. Sendezeitpunkt-Spalte bestätigen (falls noch nicht gesetzt) **
+            '******************************************************************************
+            If SpalteSendezeitpunkt = "" Then
+                Set SendezeitpunktRange = xlWS.Cells.Find("Sendezeitpunkt", LookIn:=xlValues, LookAt:=xlWhole)
+                If SendezeitpunktRange Is Nothing Then
+                    SpalteSendezeitpunkt = InputBox("Spalte für Sendezeitpunkt (z.B. K oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
+                Else
+                    SpalteSendezeitpunkt = Chr(SendezeitpunktRange.Column + 64)
+                End If
+            End If
+
             '******************************************************************************
             ' ** 7. E-Mail-Versandoption: Direkt versenden oder nur generieren lassen **
             '******************************************************************************
