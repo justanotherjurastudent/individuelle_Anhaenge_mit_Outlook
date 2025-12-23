@@ -486,7 +486,15 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             '******************************************************************************
             Dim fehlerListe As String
             Dim lastRow As Long
-            lastRow = xlWS.Cells(xlWS.Rows.Count, 1).End(xlUp).Row
+            
+            ' Finde die letzte Zeile über alle Spalten hinweg, um leere Zellen in Spalte A zu berücksichtigen
+            On Error Resume Next
+            lastRow = xlWS.Cells.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
+            If Err.Number <> 0 Or lastRow = 0 Then
+                lastRow = xlWS.UsedRange.Rows.Count + xlWS.UsedRange.Row - 1
+            End If
+            On Error GoTo 0
+            
             Debug.Print "Zu verarbeitende Zeilen: " & (lastRow - startRow + 1) & " (Zeilen " & startRow & " bis " & lastRow & ")"
             
             For d = startRow To lastRow
