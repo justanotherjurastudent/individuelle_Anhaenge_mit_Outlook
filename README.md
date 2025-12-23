@@ -51,6 +51,7 @@ Supporte meinen frei verfügbaren Content :)
 - Beispiel Kopf (optional):  
   „%Anrede% %Titel% %Vorname% %Nachname%,“  
   Danach der eigentliche Nachrichtentext.
+- **Automatische Textbereinigung:** Der Code entfernt automatisch doppelte Leerzeichen und Leerzeichen vor Satzzeichen (z. B. `, . ! ? : ;`), die durch leere Platzhalter entstehen könnten.
 
 > [!TIP]
 > Für Serien mit vielen Einträgen zuerst einen Testlauf mit wenigen Zeilen im Modus „nur generieren“ durchführen; anschließend Inhalte prüfen.
@@ -76,6 +77,10 @@ Supporte meinen frei verfügbaren Content :)
 | Nachname                | Nachname                              | Optional                          | „Mustermann“ |
 | Unternehmen/Unternehmensname | Firmenname                      | Optional                          | „Beispiel GmbH“ |
 | Sendezeitpunkt          | Geplanter Versand                     | Optional                          | Gültiges Datum/Uhrzeit, siehe unten |
+
+> [!NOTE]
+> - **Anrede & Titel:** Diese Felder werden automatisch getrimmt (führende/folgende Leerzeichen entfernt). Ist ein Titel in Excel leer, wird der Platzhalter `%Titel%` im Word-Dokument restlos entfernt, ohne dass ein störendes Leerzeichen zurückbleibt.
+> - **Datenbereich:** Der Code erkennt das Ende der Tabelle automatisch, auch wenn in der ersten Spalte (A) einzelne Zellen leer sind.
 
 > [!IMPORTANT]
 > - Mehrere Anhänge werden in EINER Zelle durch ein **Komma** getrennt, z. B.:  
@@ -229,16 +234,19 @@ Freundliche Grüße
 ## Changelog
 
 ### Update am 25.03.2025
-Der Code wurde stark angepasst, ist nun entschlackter und robuster. Zusätzlich wurden viele Kommentare an den Code geschrieben, um ihn verstehen zu können.
+Der Code wurde stark angepasst, ist nun entschlackter und robuster. Zusätzlich wurden viele Kommentare an den Code geschrieben, um ihn verstehen zu können. Eine zusätzliche Sicherheitsabfrage vor dem Direktversand wurde implementiert, um versehentliches Senden zu verhindern.
+
+### Update am 28.03.2025
+Verbesserung der Formatübernahme: Die Schriftgröße aus der Word-Vorlage wird nun zuverlässiger in die E-Mail übernommen.
 
 ### Update am 08.05.2025
-Zusätzlich kann nun noch ein Unternehmensname verwendet werden. In der Excel-Tabelle muss diese Spalte hierfür den NAmen "Unternehmen" oder "Unternehmensnamen" haben, um automatisch erkannt zu werden. In dem Word-Dokument wird der Unternehmensname über den Platzhalter %Unternehmen% eingefügt.
+Zusätzlich kann nun noch ein Unternehmensname verwendet werden. In der Excel-Tabelle muss diese Spalte hierfür den Namen „Unternehmen“ oder „Unternehmensnamen“ haben, um automatisch erkannt zu werden. In dem Word-Dokument wird der Unternehmensname über den Platzhalter %Unternehmen% eingefügt.
 
 ### Update am 09.05.2025
-Wichtiges Update: Die formelle Anrede wird nun korrekt gesetzt, wenn sich in der Excel-Zelle Herr oder Frau befindet. Auch müssen nicht alle möglichen Spalten (zB Vorname oder BCC) existieren, um die E-Mail zu generieren.
+Wichtiges Update: Die formelle Anrede wird nun korrekt gesetzt, wenn sich in der Excel-Zelle „Herr“ oder „Frau“ befindet. Auch müssen nicht alle möglichen Spalten (z. B. Vorname oder BCC) existieren, um die E-Mail zu generieren.
 
 ### Update am 11.05.2025
-Nun werden auch (un)geordnete Listen (ggf. mit mehreren Ebenen) sowie abweichende Schriftfarben und Texthervorhebungsfarben in die E-Mail übernommen.
+Nun werden auch (un)geordnete Listen (ggf. mit mehreren Ebenen) sowie abweichende Schriftfarben und Texthervorhebungsfarben in die E-Mail übernommen. Zudem startet der Dateiauswahldialog für die Excel-Liste nun standardmäßig im Dokumenten-Ordner des Nutzers.
 
 ### Update am 12.05.2025
 Wichtiges Update: Statt das Word-Dokument mit HTML-Tags zu versehen, wird das Dokument temporär als HTML-Dokument abgespeichert und dessen Inhalt wird in die E-Mail eingefügt. So sollten die allermeisten Formatierungen aus Word erhalten bleiben. 
@@ -248,5 +256,8 @@ In einer zusätzlichen Spalte in Excel kann ein Sendezeitpunkt für jede Nachric
 Wichtiges Update: Nun können auch Bilder in die E-Mail eingefügt werden. Möglich macht dies die technische Änderung, dass das Word-Dokument nicht mehr temporär als HTML-Datei abgespeichert wird, sondern der Dokumenteninhalt in die E-Mail hinein kopiert wird (mit den Platzhalterersetzungen).
 Außerdem können Dateinamen nun auch Kommas enthalten - davor war das Komma das unmissverständliche Trennzeichen zwischen zwei Dateipfaden.
 Zuletzt wurden die (Warn)Meldungen verbessert und Debug-Logs in dem Direktbereich im VBA-Editor hinzugefügt.
+
+### Update vom 23.12.2025
+Wichtiges Update zur Textqualität: Der Code bereinigt nun automatisch doppelte Leerzeichen und entfernt Leerzeichen vor Satzzeichen, die oft durch optionale, aber leere Platzhalter (wie `%Titel%`) entstehen. Zudem werden Anreden und Titel nun konsequent getrimmt. Die Erkennung der letzten Zeile in Excel wurde verbessert, sodass leere Zellen in der ersten Spalte nicht mehr zum vorzeitigen Abbruch führen.
 
 
