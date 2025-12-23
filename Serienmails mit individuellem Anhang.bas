@@ -650,6 +650,25 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     If SpalteUnternehmen <> "" Then .Execute FindText:="%Unternehmen%", ReplaceWith:=xlWS.Range(SpalteUnternehmen & i).Value, Replace:=wdReplaceAll
                 End With
                 
+                ' Bereinigung von Leerzeichen (Doppelte Leerzeichen und Leerzeichen vor Satzzeichen)
+                With tempDoc.Range.Find
+                    .ClearFormatting
+                    .Replacement.ClearFormatting
+                    
+                    ' 1. Doppelte Leerzeichen durch einfache ersetzen
+                    Do While .Execute(FindText:="  ", ReplaceWith:=" ", Replace:=wdReplaceAll)
+                    Loop
+                    
+                    ' 2. Leerzeichen vor Satzzeichen entfernen
+                    Dim satzzeichen As Variant
+                    Dim zeichen As Variant
+                    satzzeichen = Array(",", ".", "!", "?", ":", ";")
+                    
+                    For Each zeichen In satzzeichen
+                        .Execute FindText:=" " & zeichen, ReplaceWith:=zeichen, Replace:=wdReplaceAll
+                    Next zeichen
+                End With
+                
                 '******************************************************************************
                 ' ** 11. E-Mail-Versand (MODIFIKATIONSMÖGLICHKEIT: Vorgang pausieren) **
                 '******************************************************************************
