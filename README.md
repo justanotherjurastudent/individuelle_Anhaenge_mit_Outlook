@@ -90,7 +90,6 @@ Supporte meinen frei verfügbaren Content :)
 >   `C:\Rechnungen\RE-4711.pdf; C:\Rechnungen\AGB.pdf`  
 > - Als Dateipfadseparator werden sowohl der Windows-Standard `\` als auch `/` unterstützt. Das **Komma** oder **Semikolon** trennt nur mehrere Pfade innerhalb derselben Zelle.  
 > - Der Code verarbeitet zuverlässig in Anführungszeichen gesetzte Pfade, **Kommas im Dateinamen**, `file:///`‑URLs, UNC‑Pfade (`\\Server\Freigabe\...`) und **relative Pfade** relativ zum Speicherort der Excel‑Datei. Hyperlinks in Zellen werden berücksichtigt.
-
 > - Dateipfade müssen existieren und lesbar sein. Fehler werden gesammelt angezeigt und der Vorgang bricht zur Korrektur ab.
 
 ***
