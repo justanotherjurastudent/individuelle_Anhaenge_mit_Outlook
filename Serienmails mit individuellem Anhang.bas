@@ -568,6 +568,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 Else
                     strAnrede = ""
                 End If
+                ' Leerzeichen in Anrede ignorieren
+                strAnrede = Trim(strAnrede)
                 If SpalteVorname <> "" Then
                     strVorname = xlWS.Range(SpalteVorname & i).Value
                 Else
@@ -632,7 +634,17 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     .ClearFormatting
                     .Replacement.ClearFormatting
                     .Execute FindText:="%Anrede%", ReplaceWith:=strAnrede, Replace:=wdReplaceAll
-                    If SpalteTitel <> "" Then .Execute FindText:="%Titel%", ReplaceWith:=xlWS.Range(SpalteTitel & i).Value, Replace:=wdReplaceAll
+                    If SpalteTitel <> "" Then
+                        Dim titelVal As String
+                        titelVal = Trim(xlWS.Range(SpalteTitel & i).Value)
+                        If titelVal <> "" Then
+                            .Execute FindText:="%Titel%", ReplaceWith:=titelVal, Replace:=wdReplaceAll
+                        Else
+                            .Execute FindText:="%Titel%", ReplaceWith:="", Replace:=wdReplaceAll
+                        End If
+                    Else
+                        .Execute FindText:="%Titel%", ReplaceWith:="", Replace:=wdReplaceAll
+                    End If
                     If SpalteVorname <> "" Then .Execute FindText:="%Vorname%", ReplaceWith:=strVorname, Replace:=wdReplaceAll
                     If SpalteNachname <> "" Then .Execute FindText:="%Nachname%", ReplaceWith:=strNachname, Replace:=wdReplaceAll
                     If SpalteUnternehmen <> "" Then .Execute FindText:="%Unternehmen%", ReplaceWith:=xlWS.Range(SpalteUnternehmen & i).Value, Replace:=wdReplaceAll
