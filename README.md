@@ -153,7 +153,7 @@ Supporte meinen frei verfügbaren Content :)
 - Dann werden Anhänge aus der Zelle hinzugefügt. `file:///`‑URLs werden in Pfade umgewandelt; Anführungszeichen an den Enden werden entfernt; relative Pfade werden relativ zum Workbook‑Ordner aufgelöst.  
 - Ist ein gültiger zukünftiger „Sendezeitpunkt“ gesetzt, wird die verzögerte Zustellung aktiviert; bei ungültigen Werten erscheint eine Warnung.
 
-10) Versand/Anzeige & Abschluss  
+11) Versand/Anzeige & Abschluss  
 - Je nach Modus werden Mails gesendet oder nur generiert (das Versenden liegt dann in Ihrer Hand).  
 - Am Ende erscheint eine Zusammenfassung (erfolgreich verarbeitet/Fehler) und die Objekte werden aufgeräumt.
 
