@@ -1,7 +1,7 @@
 # Sende individuelle Anhänge an deine Empfänger mit Serienmails
 
 Mit diesen VBA-Code kannst du mit Outlook, Excel und Word individuelle Dateianhänge an deine Empfänger per Serienmail senden.
-Kurzüberblick: Diese README erklärt laienverständlich, wie mit dem Word‑Makro "Serienmails mit individuellem Anhang" E‑Mails über Outlook erstellt/versendet werden, Datensätze aus Excel gelesen, Platzhalter im Word‑Text ersetzt, individuelle Anhänge pro Zeile hinzugefügt und optional ein Sendezeitpunkt gesetzt wird. Sie führt durch alle Dialog‑Abfragen und markiert Pflicht‑/Optionalfelder.
+Kurzüberblick: Diese README erklärt, wie mit dem Word‑Makro "Serienmails mit individuellem Anhang" E‑Mails über Outlook erstellt/versendet werden, Datensätze aus Excel gelesen, Platzhalter im Word‑Text ersetzt, individuelle Anhänge pro Zeile hinzugefügt und optional ein Sendezeitpunkt gesetzt wird. Sie führt durch alle Dialog‑Abfragen und markiert Pflicht‑/Optionalfelder.
 Neben dieser Anleitung gibt es noch meinen bebilderten Blogbeitrag: [hier geht's zu meinen Blog mit der Anleitung](https://blogs.urz.uni-halle.de/simpletricks/2023/03/serien-e-mails-mit-individuellen-anhaengen/)
 
 > [!IMPORTANT]
