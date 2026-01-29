@@ -23,7 +23,6 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
     '******************************************************************************'
     Const MacroVersion As String = "2026-01-29-7"
     Debug.Print "=== E-MAIL-SERIENERSTELLUNG GESTARTET ==="
-    Debug.Print "Makro-Version: " & MacroVersion
     Debug.Print "Startzeit: " & Format(Now, "dd.mm.yyyy hh:nn:ss")
     Debug.Print "Word-Version: " & Application.Version
 
@@ -155,6 +154,13 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
 
             On Error Resume Next
             Debug.Print "Outlook-Konten vorhanden: " & objOutlook.Session.Accounts.Count
+            Dim debugAcc As Object
+            Dim debugIdx As Integer
+            debugIdx = 1
+            For Each debugAcc In objOutlook.Session.Accounts
+                Debug.Print "  Konto " & debugIdx & ": " & debugAcc.DisplayName & " (" & debugAcc.SmtpAddress & ")"
+                debugIdx = debugIdx + 1
+            Next debugAcc
             On Error GoTo 0
             
             ' Spaltenfindung
@@ -202,6 +208,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
 
             ' Unternehmen-Spalte finden
             Dim SuchbegriffeUnternehmen As Variant
+            Dim term As Variant
             SuchbegriffeUnternehmen = Array("Unternehmen", "Unternehmensname")
             Dim UnternehmenRange As Excel.Range
             For Each term In SuchbegriffeUnternehmen
@@ -286,6 +293,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
 
             ' Sendezeitpunkt-Spalte vorab suchen (ohne sofortige Abfrage)
             Dim SendezeitpunktRange As Excel.Range
+            Dim lastRow As Long
+            Dim d As Long
             Set SendezeitpunktRange = xlWS.Cells.Find("Sendezeitpunkt", LookIn:=xlValues, LookAt:=xlWhole)
             If Not SendezeitpunktRange Is Nothing Then
                 SpalteSendezeitpunkt = Chr(SendezeitpunktRange.Column + 64)
@@ -300,17 +309,17 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 ' Spaltenanzeige mit fixen Abständen
                 Dim msg As String
                 msg = "Datengruppen:" & vbCrLf & _
-                      "Anrede:             " & SpalteAnrede & vbCrLf & _
-                      "Titel:                  " & SpalteTitel & vbCrLf & _
-                      "Vorname:          " & SpalteVorname & vbCrLf & _
-                      "Nachname:       " & SpalteNachname & vbCrLf & _
-                      "Unternehmen:    " & SpalteUnternehmen & vbCrLf & vbCrLf & _
-                      "E-Mail:               " & SpalteTo & vbCrLf & _
-                      "CC:                     " & SpalteCC & vbCrLf & _
-                      "BCC:                   " & SpalteBCC & vbCrLf & vbCrLf & _
-                      "Betreff:              " & SpalteSubj & vbCrLf & _
-                      "Anhang:           " & SpalteAttach & vbCrLf & _
-                      "Sendezeitpunkt:   " & SpalteSendezeitpunkt & vbCrLf & vbCrLf & _
+                      "Anrede:                   " & SpalteAnrede & vbCrLf & _
+                      "Titel:                        " & SpalteTitel & vbCrLf & _
+                      "Vorname:                " & SpalteVorname & vbCrLf & _
+                      "Nachname:             " & SpalteNachname & vbCrLf & _
+                      "Unternehmen:        " & SpalteUnternehmen & vbCrLf & vbCrLf & _
+                      "E-Mail:                     " & SpalteTo & vbCrLf & _
+                      "CC:                           " & SpalteCC & vbCrLf & _
+                      "BCC:                         " & SpalteBCC & vbCrLf & vbCrLf & _
+                      "Betreff:                    " & SpalteSubj & vbCrLf & _
+                      "Anhang:                  " & SpalteAttach & vbCrLf & _
+                      "Sendezeitpunkt:    " & SpalteSendezeitpunkt & vbCrLf & vbCrLf & _
                       "Diese Spalten wurden zu den Kontaktinformationen gefunden. Sind Sie einverstanden?"
                 
                 confirmColumns = MsgBox(msg, vbQuestion + vbYesNoCancel, "Spaltenbestätigung")
@@ -469,75 +478,15 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             End If
             
             '******************************************************************************
-            ' ** 6. Anrede auswählen **
+            ' ** 5a. Mindestdaten-Check (FRÜHE PRÜFUNG: vor allen anderen Fragen) **
             '******************************************************************************
-            Dim useCustomAnredeRes As VbMsgBoxResult
-            useCustomAnredeRes = MsgBox("Möchten Sie die voreingestellte formelle Anrede übernehmen?" & vbCrLf & _
-            "Diese erkennt automatisch verschiedene Angaben (z.B. Herr, m, Mann / Frau, w, weiblich) " & vbCrLf & _
-            "und wandelt sie in 'Sehr geehrter Herr' bzw. 'Sehr geehrte Frau' um.", vbYesNoCancel + vbQuestion, "Formelle Anrede")
-            If useCustomAnredeRes = vbCancel Then
-                LogAbort "Anrede-Auswahl abgebrochen"
-                GoTo Cleanup
-            End If
-            Dim useCustomAnrede As Boolean
-            useCustomAnrede = (useCustomAnredeRes = vbYes)
-            
-            '******************************************************************************
-            ' ** 6a. Sendezeitpunkt-Spalte bestätigen (falls noch nicht gesetzt) **
-            '******************************************************************************
-            If SpalteSendezeitpunkt = "" Then
-                Set SendezeitpunktRange = xlWS.Cells.Find("Sendezeitpunkt", LookIn:=xlValues, LookAt:=xlWhole)
-                If SendezeitpunktRange Is Nothing Then
-                    SpalteSendezeitpunkt = InputBox("Spalte für Sendezeitpunkt (z.B. K oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
-                Else
-                    SpalteSendezeitpunkt = Chr(SendezeitpunktRange.Column + 64)
-                End If
-            End If
-
-            '******************************************************************************
-            ' ** 7. E-Mail-Versandoption: Direkt versenden oder nur generieren lassen **
-            '******************************************************************************
-            Dim sendDirectlyRes As VbMsgBoxResult
-            sendDirectlyRes = MsgBox("Möchten Sie die E-Mails direkt versenden? Wenn nein, dann werden die E-Mails nur generiert und Sie senden jede E-Mail einzeln ab.", vbYesNoCancel + vbQuestion, "Versandoption")
-            If sendDirectlyRes = vbCancel Then
-                LogAbort "Versandoption abgebrochen"
-                GoTo Cleanup
-            End If
-            Dim sendDirectly As Boolean
-            sendDirectly = (sendDirectlyRes = vbYes)
-
-            If sendDirectly Then
-                Dim confirmSend As VbMsgBoxResult
-                confirmSend = MsgBox("Sind Sie sicher, dass alle E-Mails sofort nach ihrer Erstellung automatisch versendet werden sollen?", vbYesNoCancel + vbQuestion, "Bestätigung E-Mail-Versand")
-                If confirmSend = vbCancel Then
-                    LogAbort "Versand-Bestätigung abgebrochen"
-                    GoTo Cleanup
-                End If
-                If confirmSend = vbNo Then
-                    sendDirectly = False
-                End If
-            End If
-            
-            ' Debug: Parameter-Zusammenfassung
-            Debug.Print "Parameter:"
-            Debug.Print "  - Anrede: " & IIf(useCustomAnrede, "Formell (Sehr geehrter Herr/Frau)", "Aus Excel übernehmen")
-            Debug.Print "  - Versand: " & IIf(sendDirectly, "Direkt versenden", "Nur generieren")
-            
-            '******************************************************************************
-            ' ** 8. Word-Inhalt vorbereiten für E-Mail-Body **
-            '******************************************************************************
-            ' Hinweis: Es werden keine Änderungen am Originaldokument vorgenommen.
-            ' Daher wird bewusst kein UndoRecord verwendet (würde sonst User-Änderungen rückgängig machen).
-
-            '******************************************************************************
-            ' ** 9. Anhang-Validierung (MODIFIKATIONSMÖGLICHKEIT: erweiterter Umgang mit Netzwerkpfaden) **
-            '******************************************************************************
-            Dim fehlerListe As String
-            Dim lastRow As Long
-            
             ' Finde die letzte Zeile über alle Spalten hinweg, um leere Zellen in Spalte A zu berücksichtigen
             On Error Resume Next
-            lastRow = xlWS.Cells.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
+            Dim lastRowSearch As Object
+            Set lastRowSearch = xlWS.Cells.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious)
+            If Not lastRowSearch Is Nothing Then
+                lastRow = lastRowSearch.Row
+            End If
             If Err.Number <> 0 Or lastRow = 0 Then
                 lastRow = xlWS.UsedRange.Rows.Count + xlWS.UsedRange.Row - 1
             End If
@@ -583,6 +532,172 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     GoTo Cleanup
                 End If
             End If
+            
+            '******************************************************************************
+            ' ** 6. Anrede auswählen **
+            '******************************************************************************
+            Dim useCustomAnredeRes As VbMsgBoxResult
+            useCustomAnredeRes = MsgBox("Möchten Sie die voreingestellte formelle Anrede übernehmen?" & vbCrLf & _
+            "Diese erkennt automatisch verschiedene Angaben (z.B. Herr, m, Mann / Frau, w, weiblich) " & vbCrLf & _
+            "und wandelt sie in 'Sehr geehrter Herr' bzw. 'Sehr geehrte Frau' um.", vbYesNoCancel + vbQuestion, "Formelle Anrede")
+            If useCustomAnredeRes = vbCancel Then
+                LogAbort "Anrede-Auswahl abgebrochen"
+                GoTo Cleanup
+            End If
+            Dim useCustomAnrede As Boolean
+            useCustomAnrede = (useCustomAnredeRes = vbYes)
+            
+            '******************************************************************************
+            ' ** 6a. Sendezeitpunkt-Spalte bestätigen (falls noch nicht gesetzt) **
+            '******************************************************************************
+            If SpalteSendezeitpunkt = "" Then
+                Set SendezeitpunktRange = xlWS.Cells.Find("Sendezeitpunkt", LookIn:=xlValues, LookAt:=xlWhole)
+                If SendezeitpunktRange Is Nothing Then
+                    SpalteSendezeitpunkt = InputBox("Spalte für Sendezeitpunkt (z.B. K oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
+                Else
+                    SpalteSendezeitpunkt = Chr(SendezeitpunktRange.Column + 64)
+                End If
+            End If
+
+            '******************************************************************************
+            ' ** 6b. Outlook-Konto auswählen (falls mehrere vorhanden) **
+            '******************************************************************************
+            Dim accountCount As Integer
+            accountCount = 0
+            On Error Resume Next
+            accountCount = objOutlook.Session.Accounts.Count
+            On Error GoTo 0
+            
+            Dim selectedAccount As Object
+            Set selectedAccount = Nothing
+            
+            If accountCount > 1 Then
+                ' Mehrere Konten vorhanden - User muss eines wählen
+                Dim accountSelectionConfirmed As Boolean
+                accountSelectionConfirmed = False
+                
+                Do While Not accountSelectionConfirmed
+                    Dim accountList As String
+                    accountList = "Folgende Outlook-Konten sind verfügbar:" & vbCrLf & vbCrLf
+                    
+                    Dim acc As Object
+                    Dim accIdx As Integer
+                    accIdx = 1
+                    For Each acc In objOutlook.Session.Accounts
+                        On Error Resume Next
+                        Dim accDisplay As String
+                        accDisplay = acc.DisplayName
+                        If accDisplay = "" Then accDisplay = acc.SmtpAddress
+                        If accDisplay = "" Then accDisplay = "(Unbekanntes Konto)"
+                        accountList = accountList & accIdx & " - " & accDisplay & vbCrLf
+                        accIdx = accIdx + 1
+                        On Error GoTo 0
+                    Next acc
+                    
+                    accountList = accountList & vbCrLf & "Wählen Sie das Konto aus, das verwendet werden soll:"
+                    
+                    Dim selectedAccountNum As String
+                    selectedAccountNum = InputBox(Prompt:=accountList, Title:="Outlook-Konto auswählen", Default:="1")
+                    
+                    If selectedAccountNum = "" Then
+                        LogAbort "Konto-Auswahl abgebrochen"
+                        GoTo Cleanup
+                    End If
+                    
+                    ' Validiere die Eingabe
+                    Dim selectedAccNum As Integer
+                    On Error Resume Next
+                    selectedAccNum = CInt(selectedAccountNum)
+                    On Error GoTo 0
+                    
+                    If selectedAccNum < 1 Or selectedAccNum > accountCount Then
+                        MsgBox "Ungültige Auswahl. Bitte eine Zahl zwischen 1 und " & accountCount & " eingeben.", vbExclamation
+                        ' Schleife wiederholt sich
+                    Else
+                        ' Hole das ausgewählte Konto
+                        On Error Resume Next
+                        Set selectedAccount = objOutlook.Session.Accounts.Item(selectedAccNum)
+                        On Error GoTo 0
+                        
+                        If selectedAccount Is Nothing Then
+                            MsgBox "Das ausgewählte Konto konnte nicht geladen werden.", vbExclamation
+                            ' Schleife wiederholt sich
+                        Else
+                            ' Bestätigung anzeigen
+                            accDisplay = selectedAccount.DisplayName
+                            If accDisplay = "" Then accDisplay = selectedAccount.SmtpAddress
+                            If accDisplay = "" Then accDisplay = "(Unbekanntes Konto)"
+                            
+                            Dim confirmAccount As VbMsgBoxResult
+                            confirmAccount = MsgBox("Absender-Konto: " & accDisplay & vbCrLf & vbCrLf & _
+                                                   "Dieser Mail-Account wird im Folgenden verwendet." & vbCrLf & _
+                                                   "Ist das korrekt?", vbYesNoCancel + vbQuestion, "Konto-Bestätigung")
+                            
+                            If confirmAccount = vbCancel Then
+                                LogAbort "Konto-Bestätigung abgebrochen"
+                                GoTo Cleanup
+                            ElseIf confirmAccount = vbNo Then
+                                ' Zurück zur Kontoauswahl - Schleife wiederholt sich
+                            Else
+                                ' vbYes - Bestätigung akzeptiert
+                                accountSelectionConfirmed = True
+                            End If
+                        End If
+                    End If
+                Loop
+                
+                ' Übernahme in preferredAccountSmtp und preferredAccountDisplayName (wird später bei .SendUsingAccount verwendet)
+                preferredAccountSmtp = selectedAccount.SmtpAddress
+                preferredAccountDisplayName = selectedAccount.DisplayName
+            ElseIf accountCount = 1 Then
+                ' Nur ein Konto vorhanden - automatisch verwenden
+                Set selectedAccount = objOutlook.Session.Accounts.Item(1)
+                On Error Resume Next
+                preferredAccountSmtp = selectedAccount.SmtpAddress
+                preferredAccountDisplayName = selectedAccount.DisplayName
+                On Error GoTo 0
+            End If
+
+            '******************************************************************************
+            ' ** 7. E-Mail-Versandoption: Direkt versenden oder nur generieren lassen **
+            '******************************************************************************
+            Dim sendDirectlyRes As VbMsgBoxResult
+            sendDirectlyRes = MsgBox("Möchten Sie die E-Mails direkt versenden? Wenn nein, dann werden die E-Mails nur generiert und Sie senden jede E-Mail einzeln ab.", vbYesNoCancel + vbQuestion, "Versandoption")
+            If sendDirectlyRes = vbCancel Then
+                LogAbort "Versandoption abgebrochen"
+                GoTo Cleanup
+            End If
+            Dim sendDirectly As Boolean
+            sendDirectly = (sendDirectlyRes = vbYes)
+
+            If sendDirectly Then
+                Dim confirmSend As VbMsgBoxResult
+                confirmSend = MsgBox("Sind Sie sicher, dass alle E-Mails sofort nach ihrer Erstellung automatisch versendet werden sollen?", vbYesNoCancel + vbQuestion, "Bestätigung E-Mail-Versand")
+                If confirmSend = vbCancel Then
+                    LogAbort "Versand-Bestätigung abgebrochen"
+                    GoTo Cleanup
+                End If
+                If confirmSend = vbNo Then
+                    sendDirectly = False
+                End If
+            End If
+            
+            ' Debug: Parameter-Zusammenfassung
+            Debug.Print "Parameter:"
+            Debug.Print "  - Anrede: " & IIf(useCustomAnrede, "Formell (Sehr geehrter Herr/Frau)", "Aus Excel übernehmen")
+            Debug.Print "  - Versand: " & IIf(sendDirectly, "Direkt versenden", "Nur generieren")
+            Debug.Print "  - Outlook-Konto: " & IIf(selectedAccount Is Nothing, "Standard", selectedAccount.DisplayName & " (" & selectedAccount.SmtpAddress & ")")
+            
+            '******************************************************************************
+            ' ** 8. Word-Inhalt vorbereiten für E-Mail-Body **
+            '******************************************************************************
+            ' Hinweis: Es werden keine Änderungen am Originaldokument vorgenommen.
+            ' Daher wird bewusst kein UndoRecord verwendet (würde sonst User-Änderungen rückgängig machen).
+
+            '******************************************************************************
+            ' ** 9. Anhang-Validierung (MODIFIKATIONSMÖGLICHKEIT: erweiterter Umgang mit Netzwerkpfaden) **
+            '******************************************************************************
+            Dim fehlerListe As String
             
             If SpalteAttach <> "" Then
                 For d = startRow To lastRow
@@ -784,6 +899,22 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 stepInfo = "CreateItem"
                 Set objMail = objOutlook.CreateItem(0)  ' Erstelle neue Mail-Instanz für jeden Durchlauf
                 
+                ' Absenderkonto direkt nach Erstellung setzen (wichtig: muss VOR dem Inspector erfolgen)
+                stepInfo = "SetSendAccount"
+                If preferredAccountSmtp <> "" Or preferredAccountDisplayName <> "" Then
+                    Dim sendAccount As Object
+                    Set sendAccount = FindOutlookAccount(objOutlook, preferredAccountSmtp, preferredAccountDisplayName)
+                    If Not sendAccount Is Nothing Then
+                        On Error Resume Next
+                        Set objMail.SendUsingAccount = sendAccount
+                        Debug.Print "Konto für Zeile " & i & " gesetzt: " & sendAccount.DisplayName & " (" & sendAccount.SmtpAddress & ")"
+                        On Error GoTo ErrorHandler
+                    Else
+                        Debug.Print "WARNUNG Zeile " & i & ": Absenderkonto nicht gefunden (" & _
+                                   IIf(preferredAccountSmtp <> "", preferredAccountSmtp, preferredAccountDisplayName) & ")"
+                    End If
+                End If
+                
                 With objMail
                     .To = strTo
                     .CC = strCC
@@ -875,26 +1006,13 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                             Debug.Print "FEHLER bei Zeile " & i & " (" & strVorname & " " & strNachname & "): Empfänger konnte nicht aufgelöst werden (" & .To & ")."
                             GoTo NextIteration
                         End If
-                        ' Optionales Absenderkonto setzen (muss vor .Send passieren)
-                        If preferredAccountSmtp <> "" Or preferredAccountDisplayName <> "" Then
-                            Dim sendAccount As Object
-                            Set sendAccount = FindOutlookAccount(objOutlook, preferredAccountSmtp, preferredAccountDisplayName)
-                            If Not sendAccount Is Nothing Then
-                                On Error Resume Next
-                                Set .SendUsingAccount = sendAccount
-                                On Error GoTo ErrorHandler
-                            Else
-                                Debug.Print "WARNUNG: Absenderkonto nicht gefunden (" & _
-                                           IIf(preferredAccountSmtp <> "", preferredAccountSmtp, preferredAccountDisplayName) & ")"
-                            End If
-                        End If
-                        ' Fallback: erstes Konto setzen, falls keins gewählt wurde
+                        ' Konto ist bereits nach CreateItem gesetzt - hier nur noch Fallback für Standard-Konto
                         If autoSelectAccount Then
                             On Error Resume Next
                             If .SendUsingAccount Is Nothing Then
                                 If objOutlook.Session.Accounts.Count > 0 Then
                                     Set .SendUsingAccount = objOutlook.Session.Accounts.Item(1)
-                                    Debug.Print "INFO: SendUsingAccount automatisch auf Konto 1 gesetzt."
+                                    Debug.Print "INFO Zeile " & i & ": SendUsingAccount automatisch auf Konto 1 (Fallback) gesetzt."
                                 End If
                             End If
                             On Error GoTo ErrorHandler
@@ -979,7 +1097,7 @@ NextIteration:
                        "Folgende Probleme sind aufgetreten:" & vbCrLf & vbCrLf & _
                        fehlerMeldung & vbCrLf & vbCrLf & _
                        "Die fehlerhaften E-Mails wurden übersprungen. " & sentCount & " E-Mails wurden erfolgreich verarbeitet.", _
-                       vbExclamation, "Verarbeitungsfehler"
+                       vbExclamation, "Versand/Generierung trotz Fehler"
             Else
                 Debug.Print "=== VERARBEITUNG ABGESCHLOSSEN ==="
                 Debug.Print "Erfolgreich verarbeitet: " & sentCount & " E-Mails"
