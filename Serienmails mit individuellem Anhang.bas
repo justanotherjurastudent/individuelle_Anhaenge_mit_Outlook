@@ -21,9 +21,13 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
     '******************************************************************************'
     ' ** ZENTRALES DEBUG-PROTOKOLL **'
     '******************************************************************************'
+    Const MacroVersion As String = "2026-01-29-7"
     Debug.Print "=== E-MAIL-SERIENERSTELLUNG GESTARTET ==="
+    Debug.Print "Makro-Version: " & MacroVersion
     Debug.Print "Startzeit: " & Format(Now, "dd.mm.yyyy hh:nn:ss")
     Debug.Print "Word-Version: " & Application.Version
+
+    On Error GoTo FatalError
     
     '******************************************************************************
     ' ** 1. Variablen für die Verbindung zu Outlook, Word und Excel **
@@ -58,6 +62,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
     End If
     
     If Not outlookRunning Then
+        LogAbort "Outlook nicht geöffnet"
         MsgBox "Outlook ist nicht geöffnet. Bitte starten Sie Outlook und versuchen Sie es erneut.", vbExclamation, "Outlook erforderlich"
         GoTo Cleanup
     End If
@@ -112,6 +117,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
 
                 ' Abbruch, wenn keine Eingabe erfolgt
                 If selectedNumberStr = "" Then
+                    LogAbort "Arbeitsblatt-Auswahl abgebrochen"
                     GoTo Cleanup
                 End If
 
@@ -136,6 +142,20 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             ' Restliche Initialisierung
             Set doc = ActiveDocument
             Set objOutlook = CreateObject("Outlook.Application")
+
+            ' Optional: Absenderkonto festlegen (leer lassen = Standardkonto verwenden)
+            Dim preferredAccountSmtp As String
+            Dim preferredAccountDisplayName As String
+            preferredAccountSmtp = ""        ' z.B. "max.mustermann@firma.de"
+            preferredAccountDisplayName = "" ' z.B. "Max Mustermann"
+            Dim autoSelectAccount As Boolean
+            autoSelectAccount = True ' Fallback: erstes Konto verwenden, falls kein Standardkonto greift
+            Dim forceDisplayForSend As Boolean
+            forceDisplayForSend = True ' Für stabilen Direktversand: Inspector kurz anzeigen
+
+            On Error Resume Next
+            Debug.Print "Outlook-Konten vorhanden: " & objOutlook.Session.Accounts.Count
+            On Error GoTo 0
             
             ' Spaltenfindung
             Dim SpalteAnrede As String, SpalteTitel As String
@@ -209,6 +229,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             If ToRange Is Nothing Then
                 SpalteTo = InputBox("Spalte für ""E-Mail"" (z.B. E):", "Spalte finden")
                 If SpalteTo = "" Then
+                    LogAbort "E-Mail-Spalte nicht definiert"
                     MsgBox "Die Spalte mit den E-Mail-Adressen muss definiert sein. Vorgang wurde abgebrochen.", vbExclamation
                     GoTo Cleanup
                 End If
@@ -240,6 +261,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             If BetreffRange Is Nothing Then
                 SpalteSubj = InputBox("Spalte für ""Betreff"" (z.B. F oder leer lassen, wenn nicht vorhanden):", "Spalte finden")
                 If SpalteSubj = "" Then
+                    LogAbort "Betreff-Spalte nicht definiert"
                     MsgBox "Die Spalte mit dem E-Mail-Betreff muss definiert sein. Vorgang wurde abgebrochen.", vbExclamation
                     GoTo Cleanup
                 End If
@@ -297,6 +319,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     Case vbYes
                         correctionLoop = False ' Beenden
                     Case vbCancel
+                        LogAbort "Spaltenbestätigung abgebrochen"
                         GoTo Cleanup
                     Case vbNo
                         ' Aktualisierte Liste inkl. Unternehmen (Nummer 5)
@@ -319,6 +342,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                                                   Title:="Spalte korrigieren")
                         
                         If selectedColumn = "" Then ' Abbruch über 'Abbrechen'-Button
+                            LogAbort "Spaltenkorrektur abgebrochen"
                             GoTo Cleanup
                         End If
                         
@@ -418,7 +442,10 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             '******************************************************************************
             Dim useCustomStartRes As VbMsgBoxResult
             useCustomStartRes = MsgBox("Befinden sich die Kontaktinformationen ab der 2. Excelzeile?", vbYesNoCancel)
-            If useCustomStartRes = vbCancel Then GoTo Cleanup
+            If useCustomStartRes = vbCancel Then
+                LogAbort "Startzeilen-Abfrage abgebrochen"
+                GoTo Cleanup
+            End If
 
             Dim startRow As Long
             If useCustomStartRes = vbNo Then
@@ -448,7 +475,10 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             useCustomAnredeRes = MsgBox("Möchten Sie die voreingestellte formelle Anrede übernehmen?" & vbCrLf & _
             "Diese erkennt automatisch verschiedene Angaben (z.B. Herr, m, Mann / Frau, w, weiblich) " & vbCrLf & _
             "und wandelt sie in 'Sehr geehrter Herr' bzw. 'Sehr geehrte Frau' um.", vbYesNoCancel + vbQuestion, "Formelle Anrede")
-            If useCustomAnredeRes = vbCancel Then GoTo Cleanup
+            If useCustomAnredeRes = vbCancel Then
+                LogAbort "Anrede-Auswahl abgebrochen"
+                GoTo Cleanup
+            End If
             Dim useCustomAnrede As Boolean
             useCustomAnrede = (useCustomAnredeRes = vbYes)
             
@@ -469,14 +499,20 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             '******************************************************************************
             Dim sendDirectlyRes As VbMsgBoxResult
             sendDirectlyRes = MsgBox("Möchten Sie die E-Mails direkt versenden? Wenn nein, dann werden die E-Mails nur generiert und Sie senden jede E-Mail einzeln ab.", vbYesNoCancel + vbQuestion, "Versandoption")
-            If sendDirectlyRes = vbCancel Then GoTo Cleanup
+            If sendDirectlyRes = vbCancel Then
+                LogAbort "Versandoption abgebrochen"
+                GoTo Cleanup
+            End If
             Dim sendDirectly As Boolean
             sendDirectly = (sendDirectlyRes = vbYes)
 
             If sendDirectly Then
                 Dim confirmSend As VbMsgBoxResult
                 confirmSend = MsgBox("Sind Sie sicher, dass alle E-Mails sofort nach ihrer Erstellung automatisch versendet werden sollen?", vbYesNoCancel + vbQuestion, "Bestätigung E-Mail-Versand")
-                If confirmSend = vbCancel Then GoTo Cleanup
+                If confirmSend = vbCancel Then
+                    LogAbort "Versand-Bestätigung abgebrochen"
+                    GoTo Cleanup
+                End If
                 If confirmSend = vbNo Then
                     sendDirectly = False
                 End If
@@ -508,6 +544,45 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             On Error GoTo 0
             
             Debug.Print "Zu verarbeitende Zeilen: " & (lastRow - startRow + 1) & " (Zeilen " & startRow & " bis " & lastRow & ")"
+
+            ' Mindestdaten-Check (E-Mail-Adresse + Betreff) als Sammelmeldung
+            Dim missingRows As Object
+            Set missingRows = CreateObject("Scripting.Dictionary")
+            Dim missingSummary As String
+            Dim r As Long
+            For r = startRow To lastRow
+                Dim tmpTo As String
+                Dim tmpSubj As String
+                If SpalteTo <> "" Then
+                    tmpTo = Trim(CStr(xlWS.Range(SpalteTo & r).Value))
+                Else
+                    tmpTo = ""
+                End If
+                If SpalteSubj <> "" Then
+                    tmpSubj = Trim(CStr(xlWS.Range(SpalteSubj & r).Value))
+                Else
+                    tmpSubj = ""
+                End If
+                If tmpTo = "" Or tmpSubj = "" Then
+                    Dim missDetails As String
+                    missDetails = IIf(tmpTo = "", "E-Mail-Adresse", "") & _
+                                  IIf(tmpTo = "" And tmpSubj = "", ", ", "") & _
+                                  IIf(tmpSubj = "", "Betreff", "")
+                    missingRows(CStr(r)) = missDetails
+                    missingSummary = missingSummary & "Zeile " & r & ": " & missDetails & vbCrLf
+                End If
+            Next r
+            If missingRows.Count > 0 Then
+                Dim missingPrompt As String
+                missingPrompt = "Es fehlen Mindestdaten in folgenden Zeilen:" & vbCrLf & vbCrLf & _
+                                missingSummary & vbCrLf & _
+                                "Möchten Sie fortfahren?" & vbCrLf & _
+                                "(Die betroffenen E-Mails werden übersprungen)"
+                If MsgBox(missingPrompt, vbExclamation + vbYesNo, "Fehlende Mindestdaten") = vbNo Then
+                    LogAbort "Mindestdaten-Check abgebrochen"
+                    GoTo Cleanup
+                End If
+            End If
             
             If SpalteAttach <> "" Then
                 For d = startRow To lastRow
@@ -573,6 +648,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 Dim strAttach As String, strCC As String, strBCC As String
                 Dim strUnternehmen As String
                 Dim strSendezeitpunkt As Variant
+                Dim stepInfo As String
+                stepInfo = "Init"
                 
                 ' Daten aus Excel lesen (mit Fehlertoleranz)
                 If SpalteTo <> "" Then
@@ -627,6 +704,13 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     strSendezeitpunkt = xlWS.Range(SpalteSendezeitpunkt & i).Value
                 Else
                     strSendezeitpunkt = "" ' Oder vbEmpty
+                End If
+
+                ' Mindestdaten aus Sammelprüfung überspringen
+                If missingRows.Exists(CStr(i)) Then
+                    fehlerMeldung = fehlerMeldung & vbCrLf & "Fehler bei " & strVorname & " " & strNachname & " (Zeile " & i & "): Mindestdaten fehlen (" & missingRows(CStr(i)) & ")."
+                    Debug.Print "FEHLER bei Zeile " & i & " (" & strVorname & " " & strNachname & "): Mindestdaten fehlen (" & missingRows(CStr(i)) & ")."
+                    GoTo NextIteration
                 End If
 
                 
@@ -697,6 +781,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 '******************************************************************************
                 ' ** 11. E-Mail-Versand (MODIFIKATIONSMÖGLICHKEIT: Vorgang pausieren) **
                 '******************************************************************************
+                stepInfo = "CreateItem"
                 Set objMail = objOutlook.CreateItem(0)  ' Erstelle neue Mail-Instanz für jeden Durchlauf
                 
                 With objMail
@@ -713,7 +798,16 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     ' WordEditor intern unterschiedliche Word-Instanzen nutzen (COM-Interface-Mismatch).
                     ' Daher nutzen wir Copy/Paste, aber erzwingen "Originalformatierung".
                     Dim editorDoc As Object
-                    Set editorDoc = .GetInspector.WordEditor
+                    Dim insp As Object
+                    stepInfo = "GetInspector"
+                    Set insp = .GetInspector
+                    ' WordEditor ist nur verfügbar, wenn der Inspector initialisiert ist
+                    If insp Is Nothing Or insp.WordEditor Is Nothing Then
+                        .Display
+                        DoEvents
+                        Set insp = .GetInspector
+                    End If
+                    Set editorDoc = insp.WordEditor
                     Dim insertRange As Object
                     Set insertRange = editorDoc.Range(0, 0)
 
@@ -721,6 +815,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     insertRange.Style = editorDoc.Styles(wdStyleNormal)
                     On Error GoTo ErrorHandler
 
+                    stepInfo = "PasteContent"
                     tempDoc.Range.Copy
                     On Error Resume Next
                     insertRange.PasteAndFormat wdFormatOriginalFormatting
@@ -731,6 +826,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     On Error GoTo ErrorHandler
                     
                     ' Anhänge hinzufügen
+                    stepInfo = "AddAttachments"
                     If strAttach <> "" Then
                         Dim attachArray() As String
                         attachArray = SplitFilePathsSmart(strAttach)
@@ -768,8 +864,64 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     
                     ' E-Mail senden oder anzeigen
                     If sendDirectly Then
+                        ' Schutz gegen leere/ungültige Empfänger (verhindert Laufzeitfehler 5 bei .Send)
+                        If Trim(.To) = "" Then
+                            fehlerMeldung = fehlerMeldung & vbCrLf & "Fehler bei " & strVorname & " " & strNachname & " (Zeile " & i & "): Empfänger fehlt (To ist leer)."
+                            Debug.Print "FEHLER bei Zeile " & i & " (" & strVorname & " " & strNachname & "): Empfänger fehlt (To ist leer)."
+                            GoTo NextIteration
+                        End If
+                        If Not .Recipients.ResolveAll Then
+                            fehlerMeldung = fehlerMeldung & vbCrLf & "Fehler bei " & strVorname & " " & strNachname & " (Zeile " & i & "): Empfänger konnte nicht aufgelöst werden (" & .To & ")."
+                            Debug.Print "FEHLER bei Zeile " & i & " (" & strVorname & " " & strNachname & "): Empfänger konnte nicht aufgelöst werden (" & .To & ")."
+                            GoTo NextIteration
+                        End If
+                        ' Optionales Absenderkonto setzen (muss vor .Send passieren)
+                        If preferredAccountSmtp <> "" Or preferredAccountDisplayName <> "" Then
+                            Dim sendAccount As Object
+                            Set sendAccount = FindOutlookAccount(objOutlook, preferredAccountSmtp, preferredAccountDisplayName)
+                            If Not sendAccount Is Nothing Then
+                                On Error Resume Next
+                                Set .SendUsingAccount = sendAccount
+                                On Error GoTo ErrorHandler
+                            Else
+                                Debug.Print "WARNUNG: Absenderkonto nicht gefunden (" & _
+                                           IIf(preferredAccountSmtp <> "", preferredAccountSmtp, preferredAccountDisplayName) & ")"
+                            End If
+                        End If
+                        ' Fallback: erstes Konto setzen, falls keins gewählt wurde
+                        If autoSelectAccount Then
+                            On Error Resume Next
+                            If .SendUsingAccount Is Nothing Then
+                                If objOutlook.Session.Accounts.Count > 0 Then
+                                    Set .SendUsingAccount = objOutlook.Session.Accounts.Item(1)
+                                    Debug.Print "INFO: SendUsingAccount automatisch auf Konto 1 gesetzt."
+                                End If
+                            End If
+                            On Error GoTo ErrorHandler
+                        End If
+                        If forceDisplayForSend Then
+                            stepInfo = "DisplayForSend"
+                            .Display
+                            DoEvents
+                            Sleep 200
+                        End If
+                        stepInfo = "Send"
+                        On Error Resume Next
                         .Send
+                        Dim sendErr As Long
+                        Dim sendDesc As String
+                        sendErr = Err.Number
+                        sendDesc = Err.Description
+                        On Error GoTo ErrorHandler
+                        If sendErr <> 0 Then
+                            If sendDesc = "" Then sendDesc = "Unbekannter Fehler"
+                            fehlerMeldung = fehlerMeldung & vbCrLf & "Fehler bei " & strVorname & " " & strNachname & " (Zeile " & i & "): Versand fehlgeschlagen: " & sendDesc & " (Nr. " & sendErr & ")"
+                            Debug.Print "FEHLER bei Zeile " & i & " (" & strVorname & " " & strNachname & "): Versand fehlgeschlagen: " & sendDesc & " (Nr. " & sendErr & ")"
+                            Err.Clear
+                            GoTo NextIteration
+                        End If
                     Else
+                        stepInfo = "Display"
                         .Display
                     End If
                 End With
@@ -799,11 +951,14 @@ ErrorHandler:
                 Set objMail = Nothing
                 On Error GoTo 0
                 
-                fehlerMeldung = fehlerMeldung & vbCrLf & "Fehler bei " & strVorname & " " & strNachname & " (Zeile " & i & "): " & Err.Description
+                Dim errDesc As String
+                errDesc = Err.Description
+                If errDesc = "" Then errDesc = "Unbekannter Fehler"
+                fehlerMeldung = fehlerMeldung & vbCrLf & "Fehler bei " & strVorname & " " & strNachname & " (Zeile " & i & "): " & errDesc & " (Nr. " & Err.Number & ", Schritt: " & stepInfo & ")"
                 If strAttach <> "" Then
                     fehlerMeldung = fehlerMeldung & vbCrLf & "  Betroffene Datei(en): " & strAttach
                 End If
-                Debug.Print "FEHLER bei Zeile " & i & " (" & strVorname & " " & strNachname & "): " & Err.Description
+                Debug.Print "FEHLER bei Zeile " & i & " (" & strVorname & " " & strNachname & "): " & errDesc & " (Nr. " & Err.Number & ", Schritt: " & stepInfo & ")"
                 If strAttach <> "" Then
                     Debug.Print "  Betroffene Datei(en): " & strAttach
                 End If
@@ -853,10 +1008,43 @@ Cleanup:
             Set xlApp = Nothing
             Set Pfad = Nothing
         Else
+            LogAbort "Keine Datei ausgewählt"
             MsgBox "Keine Datei ausgewählt"
         End If
     End With
+    Exit Sub
+
+FatalError:
+    Debug.Print "ABBRUCH: Unerwarteter Fehler: " & Err.Description & " (Nr. " & Err.Number & ")"
+    Resume Cleanup
 End Sub
+
+Sub LogAbort(reason As String)
+    Debug.Print "ABBRUCH: " & reason
+End Sub
+
+Function FindOutlookAccount(objOutlook As Object, Optional smtp As String = "", Optional displayName As String = "") As Object
+    '******************************************************************************
+    ' ** Outlook-Konto anhand SMTP-Adresse oder Anzeigename finden **
+    '******************************************************************************
+    If objOutlook Is Nothing Then Exit Function
+    If smtp = "" And displayName = "" Then Exit Function
+
+    Dim acc As Object
+    For Each acc In objOutlook.Session.Accounts
+        If smtp <> "" Then
+            If LCase(acc.SmtpAddress) = LCase(smtp) Then
+                Set FindOutlookAccount = acc
+                Exit Function
+            End If
+        ElseIf displayName <> "" Then
+            If LCase(acc.DisplayName) = LCase(displayName) Then
+                Set FindOutlookAccount = acc
+                Exit Function
+            End If
+        End If
+    Next acc
+End Function
 
 
 Function SplitFilePathsSmart(filePaths As String) As String()
