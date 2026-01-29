@@ -1021,7 +1021,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                             stepInfo = "DisplayForSend"
                             .Display
                             DoEvents
-                            Sleep 200
+                            Sleep 100
                         End If
                         stepInfo = "Send"
                         On Error Resume Next
