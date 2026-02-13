@@ -674,10 +674,38 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             useOutlookSignature = (useOutlookSignatureRes = vbYes)
 
             '******************************************************************************
-            ' ** 11. E-Mail-Versandoption: Direkt versenden oder nur generieren lassen **
+            ' ** 10. Testmodus: Nur erster Datensatz? **
+            '******************************************************************************
+            Dim testModeRes As VbMsgBoxResult
+            testModeRes = MsgBox("Möchten Sie zunächst nur den ersten Datensatz als Test verarbeiten?" & vbCrLf & vbCrLf & _
+                                 "Dies ist hilfreich, um zu überprüfen, ob die E-Mail so aussieht, wie gewünscht." & vbCrLf & _
+                                 "Der Rest der Datensätze wird ignoriert.", vbYesNoCancel + vbQuestion, "Testmodus")
+            If testModeRes = vbCancel Then
+                LogAbort "Testmodus abgebrochen"
+                GoTo Cleanup
+            End If
+            Dim testMode As Boolean
+            testMode = (testModeRes = vbYes)
+            
+            ' Wenn Testmodus: Nur den ersten Datensatz verarbeiten
+            If testMode Then
+                lastRow = startRow
+            End If
+
+            '******************************************************************************
+            ' ** 12. E-Mail-Versandoption: Direkt versenden oder nur generieren lassen **
             '******************************************************************************
             Dim sendDirectlyRes As VbMsgBoxResult
-            sendDirectlyRes = MsgBox("Möchten Sie die E-Mails direkt versenden? Wenn nein, dann werden die E-Mails nur generiert und Sie senden jede E-Mail einzeln ab.", vbYesNoCancel + vbQuestion, "Versandoption")
+            Dim versandOptionText As String
+            Dim versandOptionTitel As String
+            If testMode Then
+                versandOptionText = "Möchten Sie die Test-E-Mail direkt versenden? Wenn nein, dann wird die E-Mail nur generiert und Sie versenden sie selbst."
+                versandOptionTitel = "Versandoption (Testmodus)"
+            Else
+                versandOptionText = "Möchten Sie die E-Mails direkt versenden? Wenn nein, dann werden die E-Mails nur generiert und Sie senden jede E-Mail einzeln ab."
+                versandOptionTitel = "Versandoption"
+            End If
+            sendDirectlyRes = MsgBox(versandOptionText, vbYesNoCancel + vbQuestion, versandOptionTitel)
             If sendDirectlyRes = vbCancel Then
                 LogAbort "Versandoption abgebrochen"
                 GoTo Cleanup
@@ -687,7 +715,16 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
 
             If sendDirectly Then
                 Dim confirmSend As VbMsgBoxResult
-                confirmSend = MsgBox("Sind Sie sicher, dass alle E-Mails sofort nach ihrer Erstellung automatisch versendet werden sollen?", vbYesNoCancel + vbQuestion, "Bestätigung E-Mail-Versand")
+                Dim confirmSendText As String
+                Dim confirmSendTitel As String
+                If testMode Then
+                    confirmSendText = "Sind Sie sicher, dass die Test-E-Mail sofort versendet werden soll?"
+                    confirmSendTitel = "Bestätigung Test-E-Mail-Versand"
+                Else
+                    confirmSendText = "Sind Sie sicher, dass alle E-Mails sofort nach ihrer Erstellung automatisch versendet werden sollen?"
+                    confirmSendTitel = "Bestätigung E-Mail-Versand"
+                End If
+                confirmSend = MsgBox(confirmSendText, vbYesNoCancel + vbQuestion, confirmSendTitel)
                 If confirmSend = vbCancel Then
                     LogAbort "Versand-Bestätigung abgebrochen"
                     GoTo Cleanup
@@ -699,19 +736,20 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             
             ' Debug: Parameter-Zusammenfassung
             Debug.Print "Parameter:"
+            Debug.Print "  - Testmodus: " & IIf(testMode, "Ja (nur erster Datensatz)", "Nein")
             Debug.Print "  - Anrede: " & IIf(useCustomAnrede, "Formell (Sehr geehrter Herr/Frau)", "Aus Excel übernehmen")
             Debug.Print "  - Versand: " & IIf(sendDirectly, "Direkt versenden", "Nur generieren")
             Debug.Print "  - Outlook-Konto: " & IIf(selectedAccount Is Nothing, "Standard", selectedAccount.DisplayName & " (" & selectedAccount.SmtpAddress & ")")
             Debug.Print "  - Outlook-Signatur: " & IIf(useOutlookSignature, "Übernehmen", "Nicht übernehmen")
             
             '******************************************************************************
-            ' ** 12. Word-Inhalt vorbereiten für E-Mail-Body **
+            ' ** 13. Word-Inhalt vorbereiten für E-Mail-Body **
             '******************************************************************************
             ' Hinweis: Es werden keine Änderungen am Originaldokument vorgenommen.
             ' Daher wird bewusst kein UndoRecord verwendet (würde sonst User-Änderungen rückgängig machen).
 
             '******************************************************************************
-            ' ** 13. Anhang-Validierung (MODIFIKATIONSMÖGLICHKEIT: erweiterter Umgang mit Netzwerkpfaden) **
+            ' ** 14. Anhang-Validierung (MODIFIKATIONSMÖGLICHKEIT: erweiterter Umgang mit Netzwerkpfaden) **
             '******************************************************************************
             Dim fehlerListe As String
             
@@ -766,7 +804,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             End If
             
             '******************************************************************************
-            ' ** 14. Platzhalter im Dokument ersetzen (MODIFIKATIONSMÖGLICHKEIT: Namen der Platzhalter anpassen) **
+            ' ** 15. Platzhalter im Dokument ersetzen (MODIFIKATIONSMÖGLICHKEIT: Namen der Platzhalter anpassen) **
             '******************************************************************************
             Dim fehlerMeldung As String
             Dim sentCount As Integer
@@ -1012,9 +1050,9 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                         Dim rangeEnd As Long
                         rangeEnd = editorDoc.Content.End - 1
                         
-                        ' Begrenzter Range: von TextEnde bis max. 20 Zeichen (oder bis zum Ende, wenn kürzer)
+                        ' Begrenzter Range: von TextEnde bis max. 200 Zeichen (oder bis zum Ende, wenn kürzer)
                         Dim checkLen As Long
-                        checkLen = IIf((textLength + 20) < rangeEnd, textLength + 20, rangeEnd)
+                        checkLen = IIf((textLength + 200) < rangeEnd, textLength + 200, rangeEnd)
                         
                         Set spacingRange = editorDoc.Range(textLength - 1, checkLen)
                         

@@ -156,21 +156,28 @@ Supporte meinen frei verfügbaren Content :)
   - Warnhinweis im Dialog: Schriftart und Schriftgröße von Nachricht und Signatur können je nach Word-/Outlook-Format abweichen; vor Versand prüfen, ob beides harmoniert.
   - "Nein": Die Outlook-Standardsignatur wird nicht übernommen.
 
-10) Versandmodus wählen  
-- Abfrage: "E‑Mails direkt versenden?"  
+10) Testmodus wählen
+- Abfrage: "Möchten Sie zunächst nur den ersten Datensatz als Test verarbeiten?"
+  - "Ja": Nur der erste (oberste) Datensatz wird verarbeitet; alle weiteren Zeilen werden ignoriert. Dies ist hilfreich, um vor dem Massenvversand zu überprüfen, ob die E-Mail so aussieht, wie gewünscht.
+  - "Nein": Alle Datensätze werden verarbeitet.
+  - "Abbrechen": Der Vorgang wird beendet.
+- Im Testmodus werden die folgenden Dialoge (Versandmodus, Bestätigung) mit dem Begriff "Test-E-Mail" statt "E-Mails" angepasst.
+
+11) Versandmodus wählen  
+- Abfrage: "E‑Mails direkt versenden?" (oder "Test-E-Mail direkt versenden?" im Testmodus)
   - "Ja": zusätzliche Sicherheitsbestätigung; E‑Mails werden automatisch gesendet  
   - "Nein": E‑Mails werden nur generiert und im Editor angezeigt (Entwürfe prüfen/senden)
 
-11) Anhang‑Validierung  
+12) Anhang‑Validierung  
 - Der Code prüft für jede Zeile die Existenz der angegebenen Dateien. Fehlende Dateien werden zeilenweise gelistet.  
 - Bei Fehlern: Dialog mit Zusammenfassung; Ablauf wird beendet, damit die Pfade korrigiert werden können.
 
-12) E‑Mail‑Erstellung  
+13) E‑Mail‑Erstellung  
 - Für jede Zeile wird ein temporäres Word‑Dokument erstellt, die Platzhalter (%Anrede% etc.) ersetzt und der Inhalt als HTML in eine neue Outlook‑Mail kopiert.  
 - Dann werden Anhänge aus der Zelle hinzugefügt. `file:///`‑URLs werden in Pfade umgewandelt; Anführungszeichen an den Enden werden entfernt; relative Pfade werden relativ zum Workbook‑Ordner aufgelöst.  
 - Ist ein gültiger zukünftiger "Sendezeitpunkt" gesetzt, wird die verzögerte Zustellung aktiviert; bei ungültigen Werten erscheint eine Warnung.
 
-13) Versand/Anzeige & Abschluss  
+14) Versand/Anzeige & Abschluss  
 - Je nach Modus werden Mails gesendet oder nur generiert (das Versenden liegt dann in Ihrer Hand).  
 - Am Ende erscheint eine Zusammenfassung (erfolgreich verarbeitet/Fehler) und die Objekte werden aufgeräumt.
 
@@ -292,3 +299,9 @@ Zudem werden nun sowohl `/` als auch `\` als Dateipfadseparatoren unterstützt u
 - **Abstandsnormalisierung:** Der Abstand zwischen Nachrichtentext und Signatur wird zuverlässig auf eine Leerzeile normalisiert – auch wenn der Nachrichtentext mit einem Absatz endet. Dies behebt das Problem der zu großen Lücke vor der Signatur.
 - **Warnung zu Format-Abweichungen:** Die Signatur-Abfrage enthält einen Hinweis, dass Schriftart und Schriftgröße von Nachricht und Signatur abweichen können. Du wirst aufgefordert, dies vor dem Versand zu überprüfen.
 - **Ablauf-Nummerierung vereinfacht:** Der dokumentierte Ablauf wurde von Unterpunkten (z. B. 5a/6a/6b/6c) auf fortlaufende Ganzzahlen umgestellt – sowohl im Code als auch in dieser README. Dies macht den Ablauf übersichtlicher.
+
+### Update vom 13.02.2026 (2. Teil)
+**Testmodus für sichere Vorschau:**
+- **Testmodus hinzugefügt:** Vor dem Versand kannst du wählen, ob nur der erste Datensatz als Test verarbeitet werden soll. Dies ist ideal, um zu überprüfen, ob die E-Mail mit Platzhaltern, Formatierung und Anhängen so aussieht, wie gewünscht.
+- **Adaptive Dialoge:** Wenn der Testmodus aktiv ist, werden die nachfolgenden Dialoge mit "Test-E-Mail" statt "E-Mails" bezeichnet, um die aktuelle Situation zu verdeutlichen.
+- **Nahtlose Integration:** Der Testmodus ist zwischen der Signatur-Abfrage und der Versandmodus-Abfrage positioniert und hat keine Auswirkungen auf andere Funktionen.
