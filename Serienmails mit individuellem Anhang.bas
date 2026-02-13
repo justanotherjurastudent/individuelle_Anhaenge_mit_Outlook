@@ -961,7 +961,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                         signatureText = Replace(signatureText, vbCr, "")
                         signatureText = Replace(signatureText, vbLf, "")
                         If Trim(signatureText) <> "" Then
-                            signatureMarker = "__SIGNATURE_MARKER__" & CStr(Timer)
+                            signatureMarker = "__SIGNATURE_MARKER__" & CStr(i)
                             editorDoc.Range(0, 0).InsertBefore signatureMarker
                         End If
                     Else
@@ -999,7 +999,8 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                         If markerFound Then
                             markerRange.Text = ""
                             Dim sigChar As String
-                            Do While markerRange.Start < editorDoc.Content.End - 1
+                            Do
+                                If markerRange.Start >= editorDoc.Content.End - 1 Then Exit Do
                                 sigChar = editorDoc.Range(markerRange.Start, markerRange.Start + 1).Text
                                 If sigChar = vbCr Or sigChar = vbLf Then
                                     editorDoc.Range(markerRange.Start, markerRange.Start + 1).Delete
