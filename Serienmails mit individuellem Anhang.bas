@@ -953,15 +953,16 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     End If
                     Set editorDoc = insp.WordEditor
                     
-                    Dim signatureRange As Object
-                    Set signatureRange = Nothing
+                    Dim signatureMarker As String
+                    signatureMarker = ""
                     If useOutlookSignature Then
                         Dim signatureText As String
                         signatureText = editorDoc.Range(0, editorDoc.Content.End - 1).Text
                         signatureText = Replace(signatureText, vbCr, "")
                         signatureText = Replace(signatureText, vbLf, "")
                         If Trim(signatureText) <> "" Then
-                            Set signatureRange = editorDoc.Range(0, editorDoc.Content.End - 1)
+                            signatureMarker = "__SIGNATURE_MARKER__" & CStr(Timer)
+                            editorDoc.Range(0, 0).InsertBefore signatureMarker
                         End If
                     Else
                         editorDoc.Range(0, editorDoc.Content.End - 1).Delete
@@ -984,18 +985,30 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     End If
                     On Error GoTo ErrorHandler
                     
-                    If Not signatureRange Is Nothing Then
-                        Dim sigChar As String
-                        Do While signatureRange.Start < signatureRange.End
-                            sigChar = editorDoc.Range(signatureRange.Start, signatureRange.Start + 1).Text
-                            If sigChar = vbCr Or sigChar = vbLf Then
-                                editorDoc.Range(signatureRange.Start, signatureRange.Start + 1).Delete
-                                signatureRange.End = signatureRange.End - 1
-                            Else
-                                Exit Do
-                            End If
-                        Loop
-                        editorDoc.Range(signatureRange.Start, signatureRange.Start).InsertBefore vbCr
+                    If signatureMarker <> "" Then
+                        Dim markerRange As Object
+                        Dim markerFound As Boolean
+                        Set markerRange = editorDoc.Range(0, editorDoc.Content.End - 1)
+                        With markerRange.Find
+                            .ClearFormatting
+                            .Text = signatureMarker
+                            .Forward = True
+                            .Wrap = wdFindStop
+                            markerFound = .Execute
+                        End With
+                        If markerFound Then
+                            markerRange.Text = ""
+                            Dim sigChar As String
+                            Do While markerRange.Start < editorDoc.Content.End - 1
+                                sigChar = editorDoc.Range(markerRange.Start, markerRange.Start + 1).Text
+                                If sigChar = vbCr Or sigChar = vbLf Then
+                                    editorDoc.Range(markerRange.Start, markerRange.Start + 1).Delete
+                                Else
+                                    Exit Do
+                                End If
+                            Loop
+                            editorDoc.Range(markerRange.Start, markerRange.Start).InsertBefore vbCr
+                        End If
                     End If
                     
                     ' Anhänge hinzufügen
