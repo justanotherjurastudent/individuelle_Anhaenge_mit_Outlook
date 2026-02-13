@@ -662,10 +662,10 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             ' ** 10. Outlook-Signatur verwenden? **
             '******************************************************************************
             Dim useOutlookSignatureRes As VbMsgBoxResult
-            useOutlookSignatureRes = MsgBox("Soll die Outlook-Standardsignatur übernommen werden?" & vbCrLf & vbCrLf & _
-                                            "Hinweis: Je nach Word-/Outlook-Format können Schriftart und Schriftgröße von Nachricht und Signatur abweichen." & vbCrLf & _
-                                            "Bitte prüfen Sie vor dem Versand, ob beides harmoniert.", _
-                                            vbYesNoCancel + vbQuestion + vbExclamation, "Outlook-Signatur")
+            useOutlookSignatureRes = MsgBox("Soll die aktuelle Outlook-Signatur für neue Nachrichten übernommen werden, sofern eine existiert?" & vbCrLf & vbCrLf & _
+                                            "Hinweise: Falls keine Signatur existiert, klicken Sie auf 'Nein'." & vbCrLf & _
+                                            "Bitte prüfen Sie, ob Schriftart und Schriftgröße von Nachricht und Signatur harmonieren.", _
+                                            vbYesNoCancel + vbQuestion, "Outlook-Signatur")
             If useOutlookSignatureRes = vbCancel Then
                 LogAbort "Signatur-Auswahl abgebrochen"
                 GoTo Cleanup
@@ -956,18 +956,30 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     End If
                     Set editorDoc = insp.WordEditor
                     
-                    Dim signatureMarker As String
-                    signatureMarker = ""
                     If useOutlookSignature Then
-                        Dim signatureText As String
-                        signatureText = editorDoc.Range(0, editorDoc.Content.End - 1).Text
-                        signatureText = Replace(signatureText, vbCr, "")
-                        signatureText = Replace(signatureText, vbLf, "")
-                        If Trim(signatureText) <> "" Then
-                            signatureMarker = "__SIGNATURE_MARKER__" & CStr(i)
-                            editorDoc.Range(0, 0).InsertBefore signatureMarker
-                        End If
+                        ' Leere Absätze am Ende entfernen (von unten nach oben)
+                        ' So endet das Dokument mit dem letzten Element (Text/Bild etc.), nicht mit Absätzen
+                        Dim contentEnd As Long
+                        Dim charCode As String
+                        Dim pos As Long
+                        
+                        contentEnd = editorDoc.Content.End - 1
+                        pos = contentEnd
+                        
+                        Do While pos > 0
+                            charCode = editorDoc.Range(pos - 1, pos).Text
+                            ' Wenn Absatz (vbCr oder vbLf), dann löschen
+                            If charCode = vbCr Or charCode = vbLf Then
+                                editorDoc.Range(pos - 1, pos).Delete
+                                contentEnd = editorDoc.Content.End - 1
+                                pos = contentEnd
+                            Else
+                                ' Letztes Element gefunden, Schleife beenden
+                                Exit Do
+                            End If
+                        Loop
                     Else
+                        ' Signatur soll nicht übernommen werden - alles löschen
                         editorDoc.Range(0, editorDoc.Content.End - 1).Delete
                     End If
                     
@@ -988,31 +1000,41 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                     End If
                     On Error GoTo ErrorHandler
                     
-                    If signatureMarker <> "" Then
-                        Dim markerRange As Object
-                        Dim markerFound As Boolean
-                        Set markerRange = editorDoc.Range(0, editorDoc.Content.End - 1)
-                        With markerRange.Find
+                    ' Überschüssige Absätze nur zwischen Nachricht und Signatur reduzieren
+                    ' Lokalisierung: Nach dem eingefügten Text, gezielt vor der Signatur
+                    If useOutlookSignature Then
+                        Dim textLength As Long
+                        textLength = Len(tempDoc.Range.Text)
+                        
+                        ' Bereich ab Ende des eingefügten Textes bis zur Signatur (max. 200 Zeichen)
+                        ' Dies ist der Bereich, in dem die überschüssigen Absätze entstehen
+                        Dim spacingRange As Object
+                        Dim rangeEnd As Long
+                        rangeEnd = editorDoc.Content.End - 1
+                        
+                        ' Begrenzter Range: von TextEnde bis max. 20 Zeichen (oder bis zum Ende, wenn kürzer)
+                        Dim checkLen As Long
+                        checkLen = IIf((textLength + 20) < rangeEnd, textLength + 20, rangeEnd)
+                        
+                        Set spacingRange = editorDoc.Range(textLength - 1, checkLen)
+                        
+                        With spacingRange.Find
                             .ClearFormatting
-                            .Text = signatureMarker
+                            .Replacement.ClearFormatting
                             .Forward = True
                             .Wrap = wdFindStop
-                            markerFound = .Execute
-                        End With
-                        If markerFound Then
-                            markerRange.Text = ""
-                            Dim sigChar As String
-                            Do
-                                If markerRange.Start >= editorDoc.Content.End - 1 Then Exit Do
-                                sigChar = editorDoc.Range(markerRange.Start, markerRange.Start + 1).Text
-                                If sigChar = vbCr Or sigChar = vbLf Then
-                                    editorDoc.Range(markerRange.Start, markerRange.Start + 1).Delete
-                                Else
-                                    Exit Do
-                                End If
+                            
+                            ' Nur in diesem Bereich: 4+ vbCr durch 2 vbCr
+                            .Text = vbCr & vbCr & vbCr & vbCr
+                            .Replacement.Text = vbCr & vbCr
+                            Do While .Execute(FindText:=vbCr & vbCr & vbCr & vbCr, ReplaceWith:=vbCr & vbCr & vbCr, Replace:=wdReplaceAll) > 0
                             Loop
-                            editorDoc.Range(markerRange.Start, markerRange.Start).InsertBefore vbCr
-                        End If
+                            
+                            ' 3 vbCr durch 2 vbCr
+                            .Text = vbCr & vbCr & vbCr
+                            .Replacement.Text = vbCr & vbCr
+                            .Execute FindText:=vbCr & vbCr & vbCr, ReplaceWith:=vbCr & vbCr, Replace:=wdReplaceAll
+                        End With
                     End If
                     
                     ' Anhänge hinzufügen
