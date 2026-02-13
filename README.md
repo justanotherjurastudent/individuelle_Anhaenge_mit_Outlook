@@ -285,3 +285,10 @@ Zudem werden nun sowohl `/` als auch `\` als Dateipfadseparatoren unterstützt u
 - **Fehlerbehandlung & Logging:** Die Fehlerbehandlung wurde deutlich erweitert, u. a. mit einer LogAbort-Funktion und ausführlicher Protokollierung (Debug.Print) zur besseren Nachvollziehbarkeit.
 - **Find- und Variablen-Optimierung:** Die Erkennung der letzten Zeile in Excel ist robuster (Find-Objektprüfung). Alle Variablen werden nun explizit deklariert, was die Wartbarkeit und Fehlersicherheit erhöht.
 - **Direktversand stabiler:** Der Modus "DirectlySend" funktioniert nun zuverlässig, indem vor dem Versand der Outlook‑Inspector gezielt initialisiert wird. Damit sollte der Laufzeitfehler 5 verschwinden.
+
+### Update vom 13.02.2026
+**Outlook-Signatur steuerbar und Layoutverbesserungen:**
+- **Optionale Signatur-Übernahme:** Die Outlook-Standardsignatur wird nun optional per Ja/Nein-Dialog abgefragt. Während der Erstellung kannst du entscheiden, ob die Signatur übernommen werden soll oder nicht.
+- **Abstandsnormalisierung:** Der Abstand zwischen Nachrichtentext und Signatur wird zuverlässig auf eine Leerzeile normalisiert – auch wenn der Nachrichtentext mit einem Absatz endet. Dies behebt das Problem der zu großen Lücke vor der Signatur.
+- **Warnung zu Format-Abweichungen:** Die Signatur-Abfrage enthält einen Hinweis, dass Schriftart und Schriftgröße von Nachricht und Signatur abweichen können. Du wirst aufgefordert, dies vor dem Versand zu überprüfen.
+- **Ablauf-Nummerierung vereinfacht:** Der dokumentierte Ablauf wurde von Unterpunkten (z. B. 5a/6a/6b/6c) auf fortlaufende Ganzzahlen umgestellt – sowohl im Code als auch in dieser README. Dies macht den Ablauf übersichtlicher.
