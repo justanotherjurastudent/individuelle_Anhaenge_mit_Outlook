@@ -150,21 +150,26 @@ Supporte meinen frei verfügbaren Content :)
 - Hat man nur ein Konto oder keine Mehrfachkonten, entfällt dieser Schritt.
 - Der Debug-Bereich im VBA-Editor zeigt, welche Konten erkannt und welches letztlich verwendet wurde.
 
-8) Versandmodus wählen  
+9) Signatur‑Option wählen
+- Abfrage: "Soll die Outlook-Standardsignatur übernommen werden?"
+  - "Ja": Die Signatur wird übernommen; der Abstand zwischen Nachrichtentext und Signatur wird auf eine Leerzeile reduziert.
+  - "Nein": Die Outlook-Standardsignatur wird nicht übernommen.
+
+10) Versandmodus wählen  
 - Abfrage: "E‑Mails direkt versenden?"  
   - "Ja": zusätzliche Sicherheitsbestätigung; E‑Mails werden automatisch gesendet  
   - "Nein": E‑Mails werden nur generiert und im Editor angezeigt (Entwürfe prüfen/senden)
 
-9) Anhang‑Validierung  
+11) Anhang‑Validierung  
 - Der Code prüft für jede Zeile die Existenz der angegebenen Dateien. Fehlende Dateien werden zeilenweise gelistet.  
 - Bei Fehlern: Dialog mit Zusammenfassung; Ablauf wird beendet, damit die Pfade korrigiert werden können.
 
-10) E‑Mail‑Erstellung  
+12) E‑Mail‑Erstellung  
 - Für jede Zeile wird ein temporäres Word‑Dokument erstellt, die Platzhalter (%Anrede% etc.) ersetzt und der Inhalt als HTML in eine neue Outlook‑Mail kopiert.  
 - Dann werden Anhänge aus der Zelle hinzugefügt. `file:///`‑URLs werden in Pfade umgewandelt; Anführungszeichen an den Enden werden entfernt; relative Pfade werden relativ zum Workbook‑Ordner aufgelöst.  
 - Ist ein gültiger zukünftiger "Sendezeitpunkt" gesetzt, wird die verzögerte Zustellung aktiviert; bei ungültigen Werten erscheint eine Warnung.
 
-11) Versand/Anzeige & Abschluss  
+13) Versand/Anzeige & Abschluss  
 - Je nach Modus werden Mails gesendet oder nur generiert (das Versenden liegt dann in Ihrer Hand).  
 - Am Ende erscheint eine Zusammenfassung (erfolgreich verarbeitet/Fehler) und die Objekte werden aufgeräumt.
 
@@ -279,4 +284,3 @@ Zudem werden nun sowohl `/` als auch `\` als Dateipfadseparatoren unterstützt u
 - **Fehlerbehandlung & Logging:** Die Fehlerbehandlung wurde deutlich erweitert, u. a. mit einer LogAbort-Funktion und ausführlicher Protokollierung (Debug.Print) zur besseren Nachvollziehbarkeit.
 - **Find- und Variablen-Optimierung:** Die Erkennung der letzten Zeile in Excel ist robuster (Find-Objektprüfung). Alle Variablen werden nun explizit deklariert, was die Wartbarkeit und Fehlersicherheit erhöht.
 - **Direktversand stabiler:** Der Modus "DirectlySend" funktioniert nun zuverlässig, indem vor dem Versand der Outlook‑Inspector gezielt initialisiert wird. Damit sollte der Laufzeitfehler 5 verschwinden.
-

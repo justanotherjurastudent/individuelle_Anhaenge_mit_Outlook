@@ -657,6 +657,18 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 preferredAccountDisplayName = selectedAccount.DisplayName
                 On Error GoTo 0
             End If
+            
+            '******************************************************************************
+            ' ** 6c. Outlook-Signatur verwenden? **
+            '******************************************************************************
+            Dim useOutlookSignatureRes As VbMsgBoxResult
+            useOutlookSignatureRes = MsgBox("Soll die Outlook-Standardsignatur übernommen werden?", vbYesNoCancel + vbQuestion, "Outlook-Signatur")
+            If useOutlookSignatureRes = vbCancel Then
+                LogAbort "Signatur-Auswahl abgebrochen"
+                GoTo Cleanup
+            End If
+            Dim useOutlookSignature As Boolean
+            useOutlookSignature = (useOutlookSignatureRes = vbYes)
 
             '******************************************************************************
             ' ** 7. E-Mail-Versandoption: Direkt versenden oder nur generieren lassen **
@@ -687,6 +699,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Debug.Print "  - Anrede: " & IIf(useCustomAnrede, "Formell (Sehr geehrter Herr/Frau)", "Aus Excel übernehmen")
             Debug.Print "  - Versand: " & IIf(sendDirectly, "Direkt versenden", "Nur generieren")
             Debug.Print "  - Outlook-Konto: " & IIf(selectedAccount Is Nothing, "Standard", selectedAccount.DisplayName & " (" & selectedAccount.SmtpAddress & ")")
+            Debug.Print "  - Outlook-Signatur: " & IIf(useOutlookSignature, "Übernehmen", "Nicht übernehmen")
             
             '******************************************************************************
             ' ** 8. Word-Inhalt vorbereiten für E-Mail-Body **
@@ -939,6 +952,21 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                         Set insp = .GetInspector
                     End If
                     Set editorDoc = insp.WordEditor
+                    
+                    Dim signatureRange As Object
+                    Set signatureRange = Nothing
+                    If useOutlookSignature Then
+                        Dim signatureText As String
+                        signatureText = editorDoc.Range(0, editorDoc.Content.End - 1).Text
+                        signatureText = Replace(signatureText, vbCr, "")
+                        signatureText = Replace(signatureText, vbLf, "")
+                        If Trim(signatureText) <> "" Then
+                            Set signatureRange = editorDoc.Range(0, editorDoc.Content.End - 1)
+                        End If
+                    Else
+                        editorDoc.Range(0, editorDoc.Content.End - 1).Delete
+                    End If
+                    
                     Dim insertRange As Object
                     Set insertRange = editorDoc.Range(0, 0)
 
@@ -955,6 +983,20 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                         insertRange.Paste
                     End If
                     On Error GoTo ErrorHandler
+                    
+                    If Not signatureRange Is Nothing Then
+                        Dim sigChar As String
+                        Do While signatureRange.Start < signatureRange.End
+                            sigChar = editorDoc.Range(signatureRange.Start, signatureRange.Start + 1).Text
+                            If sigChar = vbCr Or sigChar = vbLf Then
+                                editorDoc.Range(signatureRange.Start, signatureRange.Start + 1).Delete
+                                signatureRange.End = signatureRange.End - 1
+                            Else
+                                Exit Do
+                            End If
+                        Loop
+                        editorDoc.Range(signatureRange.Start, signatureRange.Start).InsertBefore vbCr
+                    End If
                     
                     ' Anhänge hinzufügen
                     stepInfo = "AddAttachments"
