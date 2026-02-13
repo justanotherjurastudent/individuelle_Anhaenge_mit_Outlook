@@ -153,6 +153,7 @@ Supporte meinen frei verfügbaren Content :)
 9) Signatur‑Option wählen
 - Abfrage: "Soll die Outlook-Standardsignatur übernommen werden?"
   - "Ja": Die Signatur wird übernommen; der Abstand zwischen Nachrichtentext und Signatur wird auf eine Leerzeile reduziert.
+  - Warnhinweis im Dialog: Schriftart und Schriftgröße von Nachricht und Signatur können je nach Word-/Outlook-Format abweichen; vor Versand prüfen, ob beides harmoniert.
   - "Nein": Die Outlook-Standardsignatur wird nicht übernommen.
 
 10) Versandmodus wählen  

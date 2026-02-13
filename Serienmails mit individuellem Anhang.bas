@@ -478,7 +478,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             End If
             
             '******************************************************************************
-            ' ** 5a. Mindestdaten-Check (FRÜHE PRÜFUNG: vor allen anderen Fragen) **
+            ' ** 6. Mindestdaten-Check (FRÜHE PRÜFUNG: vor allen anderen Fragen) **
             '******************************************************************************
             ' Finde die letzte Zeile über alle Spalten hinweg, um leere Zellen in Spalte A zu berücksichtigen
             On Error Resume Next
@@ -534,7 +534,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             End If
             
             '******************************************************************************
-            ' ** 6. Anrede auswählen **
+            ' ** 7. Anrede auswählen **
             '******************************************************************************
             Dim useCustomAnredeRes As VbMsgBoxResult
             useCustomAnredeRes = MsgBox("Möchten Sie die voreingestellte formelle Anrede übernehmen?" & vbCrLf & _
@@ -548,7 +548,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             useCustomAnrede = (useCustomAnredeRes = vbYes)
             
             '******************************************************************************
-            ' ** 6a. Sendezeitpunkt-Spalte bestätigen (falls noch nicht gesetzt) **
+            ' ** 8. Sendezeitpunkt-Spalte bestätigen (falls noch nicht gesetzt) **
             '******************************************************************************
             If SpalteSendezeitpunkt = "" Then
                 Set SendezeitpunktRange = xlWS.Cells.Find("Sendezeitpunkt", LookIn:=xlValues, LookAt:=xlWhole)
@@ -560,7 +560,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             End If
 
             '******************************************************************************
-            ' ** 6b. Outlook-Konto auswählen (falls mehrere vorhanden) **
+            ' ** 9. Outlook-Konto auswählen (falls mehrere vorhanden) **
             '******************************************************************************
             Dim accountCount As Integer
             accountCount = 0
@@ -659,10 +659,13 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             End If
             
             '******************************************************************************
-            ' ** 6c. Outlook-Signatur verwenden? **
+            ' ** 10. Outlook-Signatur verwenden? **
             '******************************************************************************
             Dim useOutlookSignatureRes As VbMsgBoxResult
-            useOutlookSignatureRes = MsgBox("Soll die Outlook-Standardsignatur übernommen werden?", vbYesNoCancel + vbQuestion, "Outlook-Signatur")
+            useOutlookSignatureRes = MsgBox("Soll die Outlook-Standardsignatur übernommen werden?" & vbCrLf & vbCrLf & _
+                                            "Hinweis: Je nach Word-/Outlook-Format können Schriftart und Schriftgröße von Nachricht und Signatur abweichen." & vbCrLf & _
+                                            "Bitte prüfen Sie vor dem Versand, ob beides harmoniert.", _
+                                            vbYesNoCancel + vbQuestion + vbExclamation, "Outlook-Signatur")
             If useOutlookSignatureRes = vbCancel Then
                 LogAbort "Signatur-Auswahl abgebrochen"
                 GoTo Cleanup
@@ -671,7 +674,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             useOutlookSignature = (useOutlookSignatureRes = vbYes)
 
             '******************************************************************************
-            ' ** 7. E-Mail-Versandoption: Direkt versenden oder nur generieren lassen **
+            ' ** 11. E-Mail-Versandoption: Direkt versenden oder nur generieren lassen **
             '******************************************************************************
             Dim sendDirectlyRes As VbMsgBoxResult
             sendDirectlyRes = MsgBox("Möchten Sie die E-Mails direkt versenden? Wenn nein, dann werden die E-Mails nur generiert und Sie senden jede E-Mail einzeln ab.", vbYesNoCancel + vbQuestion, "Versandoption")
@@ -702,13 +705,13 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             Debug.Print "  - Outlook-Signatur: " & IIf(useOutlookSignature, "Übernehmen", "Nicht übernehmen")
             
             '******************************************************************************
-            ' ** 8. Word-Inhalt vorbereiten für E-Mail-Body **
+            ' ** 12. Word-Inhalt vorbereiten für E-Mail-Body **
             '******************************************************************************
             ' Hinweis: Es werden keine Änderungen am Originaldokument vorgenommen.
             ' Daher wird bewusst kein UndoRecord verwendet (würde sonst User-Änderungen rückgängig machen).
 
             '******************************************************************************
-            ' ** 9. Anhang-Validierung (MODIFIKATIONSMÖGLICHKEIT: erweiterter Umgang mit Netzwerkpfaden) **
+            ' ** 13. Anhang-Validierung (MODIFIKATIONSMÖGLICHKEIT: erweiterter Umgang mit Netzwerkpfaden) **
             '******************************************************************************
             Dim fehlerListe As String
             
@@ -763,7 +766,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
             End If
             
             '******************************************************************************
-            ' ** 10. Platzhalter im Dokument ersetzen (MODIFIKATIONSMÖGLICHKEIT: Namen der Platzhalter anpassen) **
+            ' ** 14. Platzhalter im Dokument ersetzen (MODIFIKATIONSMÖGLICHKEIT: Namen der Platzhalter anpassen) **
             '******************************************************************************
             Dim fehlerMeldung As String
             Dim sentCount As Integer
@@ -907,7 +910,7 @@ Sub SendEmailsFromWordWithExcelWithAbfrage()
                 End With
                 
                 '******************************************************************************
-                ' ** 11. E-Mail-Versand (MODIFIKATIONSMÖGLICHKEIT: Vorgang pausieren) **
+                ' ** 15. E-Mail-Versand (MODIFIKATIONSMÖGLICHKEIT: Vorgang pausieren) **
                 '******************************************************************************
                 stepInfo = "CreateItem"
                 Set objMail = objOutlook.CreateItem(0)  ' Erstelle neue Mail-Instanz für jeden Durchlauf
@@ -1142,7 +1145,7 @@ NextIteration:
             Next
             
             '******************************************************************************
-            ' ** 12. Abschluss und Bereinigung **
+            ' ** 16. Abschluss und Bereinigung **
             '******************************************************************************
             ' Keine Undo-Bereinigung nötig, da das Originaldokument nicht verändert wird.
 
